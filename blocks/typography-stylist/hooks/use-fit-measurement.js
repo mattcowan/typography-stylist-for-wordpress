@@ -27,7 +27,10 @@ import { debounce, splitContentIntoLines, resolveBlockFontFamilyStyle, resolveFi
  * author only opened was dirty on some opens.
  *
  * @param {Object} block Block attributes the measurement reads, plus
- *                       setAttributes, clientId and blockFontSizeUnit.
+ *                       setAttributes, clientId, blockFontSizeUnit and
+ *                       styleOverrides (the attributes that differ from the
+ *                       active paragraph style, or null without one; only
+ *                       those render on the heading, #458).
  * @return {{fitEditingValue: string, fitLineSizeStyle: (Object|undefined)}}
  *         The RichText value ('' unless fontSize is 'fit' and there is
  *         content), and the custom properties with the line sizes
@@ -53,7 +56,8 @@ export default function useFitMeasurement({
 	blockFontSizeUnit,
 	clientId,
 	textCase,
-	fakeSmallCaps
+	fakeSmallCaps,
+	styleOverrides = null
 }) {
 	// ===== Fit-to-width measurement (fontSize: "fit") =====
 	// Measures each visual line's natural width at a 100px reference inside
@@ -70,7 +74,7 @@ export default function useFitMeasurement({
 	measureFitPropsRef.current = {
 		content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing,
 		features, fontVariationSettings, fitLineSizes, fitWordSizes, setAttributes,
-		initialHang, fitLineHangs, textAlign, unit: blockFontSizeUnit, clientId, textCase, fakeSmallCaps
+		initialHang, fitLineHangs, textAlign, unit: blockFontSizeUnit, clientId, textCase, fakeSmallCaps, styleOverrides
 	};
 
 	const measureFitLines = () => {
@@ -122,21 +126,32 @@ export default function useFitMeasurement({
 		// varies glyph width with font size, which breaks the linear
 		// width-per-font-size assumption the stored ratio depends on.
 		node.style.fontOpticalSizing = 'none';
+		// The block's attributes, only where they render on the heading:
+		// the same test as buildEditorStyle() (editor-style.js). Under a
+		// paragraph style the attributes are a copy of the style's values,
+		// and only an override renders; the class renders the rest, and the
+		// probe has the class. A style with no weight leaves fontWeight '400'
+		// in the copy while the heading shows the theme's weight, so setting
+		// it here measured bold headings at 400 and their lines ran 5% to 8%
+		// past the box (#458).
+		const renders = (key) => !p.styleOverrides || !!p.styleOverrides[key];
 		// fontId alone must resolve (save.js parity) — gating on the fontFamily
 		// string would measure the theme's inherited font instead.
 		const measureFontFamily = resolveBlockFontFamilyStyle(p.fontId, p.fontFamily);
-		if (measureFontFamily) {
+		if (measureFontFamily && renders('fontId')) {
 			node.style.fontFamily = measureFontFamily;
 		}
-		if (p.fontWeight) node.style.fontWeight = p.fontWeight;
-		if (p.fontStyle) node.style.fontStyle = p.fontStyle;
-		if (p.letterSpacing !== 0) node.style.letterSpacing = `${p.letterSpacing / 1000}em`;
-		if (p.features.length > 0) {
+		if (p.fontWeight && renders('fontWeight')) node.style.fontWeight = p.fontWeight;
+		if (p.fontStyle && renders('fontStyle')) node.style.fontStyle = p.fontStyle;
+		if (p.letterSpacing !== 0 && renders('letterSpacing')) node.style.letterSpacing = `${p.letterSpacing / 1000}em`;
+		if (p.features.length > 0 && renders('features')) {
 			node.style.fontFeatureSettings = p.features.map(f => `"${f}" 1`).join(', ');
 		}
-		if (p.fontVariationSettings) node.style.fontVariationSettings = p.fontVariationSettings;
+		if (p.fontVariationSettings && renders('fontVariationSettings')) node.style.fontVariationSettings = p.fontVariationSettings;
 		// Case changes glyph widths (capitals, small caps), so it is measured too (#214)
-		caseDeclarations(p.textCase, p.fakeSmallCaps).forEach(([property, value]) => node.style.setProperty(property, value));
+		if (renders('textCase')) {
+			caseDeclarations(p.textCase, p.fakeSmallCaps).forEach(([property, value]) => node.style.setProperty(property, value));
+		}
 
 		host.appendChild(node);
 
@@ -217,7 +232,7 @@ export default function useFitMeasurement({
 	useEffect(() => {
 		if (fontSize !== 'fit') return;
 		debouncedMeasureFit();
-	}, [fontSize, content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing, features, fontVariationSettings, initialHang, fitLineHangs, textAlign, blockFontSizeUnit, textCase, fakeSmallCaps]); // eslint-disable-line react-hooks/exhaustive-deps -- debouncedMeasureFit is a stable ref
+	}, [fontSize, content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing, features, fontVariationSettings, initialHang, fitLineHangs, textAlign, blockFontSizeUnit, textCase, fakeSmallCaps, styleOverrides]); // eslint-disable-line react-hooks/exhaustive-deps -- debouncedMeasureFit is a stable ref
 
 	// Measure after fonts are ready, and re-measure on late font loads
 	useEffect(() => {

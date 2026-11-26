@@ -344,16 +344,6 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// The theme font the block inherits (hooks/use-computed-font.js)
 	useComputedFont(fontFamily, clientId, setComputedFont);
 
-	// Fit-to-width measurement and its re-measure triggers, and the fit
-	// editing value with its line sizes, which go on the block wrapper so a
-	// measurement does not change the RichText value (#388)
-	// (hooks/use-fit-measurement.js)
-	const { fitEditingValue: wrappedFitValue, fitLineSizeStyle } = useFitMeasurement({
-		fontSize, content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing, features,
-		fontVariationSettings, fitLineSizes, fitWordSizes, fitMaxSize, setAttributes, initialHang, fitLineHangs,
-		textAlign, blockFontSizeUnit, clientId, textCase, fakeSmallCaps
-	});
-
 	// Labels for the per-line hang controls (fit-to-width only)
 	const hangLinePreviews = useMemo(
 		() => (fontSize === 'fit' ? buildFitLinePreviews(content) : []),
@@ -406,12 +396,6 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			setAttributes({ content: cleanedContent });
 		}
 	}, [content, setAttributes]);
-
-	// The Line indent is repeated as --typost-text-indent for style.css (#364)
-	const blockProps = withBlockTextIndentProperty(useBlockProps({
-		className: 'wp-block-typost',
-		style: fitLineSizeStyle
-	}));
 
 	// Get available features from localized data, filtered by per-font visibility
 	const allFeatures = window.typostData?.features || [];
@@ -490,6 +474,23 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// attribute is the working copy, equal to the style's value unless edited.
 	const hangClass = normalizeHang(initialHang) > 0 ? ' typost-hang' : '';
 	const contentClassName = 'typost-block-content' + (activeParagraphStyle ? ` typost-styled ${styleClass}` : '') + hangClass;
+
+	// Fit-to-width measurement and its re-measure triggers, and the fit
+	// editing value with its line sizes, which go on the block wrapper so a
+	// measurement does not change the RichText value (#388)
+	// (hooks/use-fit-measurement.js). After the style sync: the measurement
+	// sets only the attributes that render, so it needs styleOverrides (#458).
+	const { fitEditingValue: wrappedFitValue, fitLineSizeStyle } = useFitMeasurement({
+		fontSize, content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing, features,
+		fontVariationSettings, fitLineSizes, fitWordSizes, fitMaxSize, setAttributes, initialHang, fitLineHangs,
+		textAlign, blockFontSizeUnit, clientId, textCase, fakeSmallCaps, styleOverrides
+	});
+
+	// The Line indent is repeated as --typost-text-indent for style.css (#364)
+	const blockProps = withBlockTextIndentProperty(useBlockProps({
+		className: 'wp-block-typost',
+		style: fitLineSizeStyle
+	}));
 
 	// Build inline style for preview
 	const buildStyle = () => {

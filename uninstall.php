@@ -89,6 +89,7 @@ delete_transient('typost_paragraph_styles_cache');
 delete_transient('typost_paragraph_styles_css');
 delete_transient('typost_paragraph_styles_css_v2');
 delete_transient('typost_paragraph_styles_css_v3');
+delete_transient('typost_paragraph_styles_css_v4');
 delete_transient('typost_vf_axes_cache');
 
 // Delete per-page font CSS transients

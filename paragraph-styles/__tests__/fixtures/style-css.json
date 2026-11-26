@@ -282,7 +282,7 @@
 					"letterSpacing": 50
 				}
 			},
-			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    letter-spacing: 0.05em;\n}"
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    letter-spacing: 0.05em;\n    --typost-fit-letter-spacing: 0.05em;\n}"
 		},
 		{
 			"label": "letter spacing negative",
@@ -292,7 +292,7 @@
 					"letterSpacing": -25
 				}
 			},
-			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    letter-spacing: -0.025em;\n}"
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    letter-spacing: -0.025em;\n    --typost-fit-letter-spacing: -0.025em;\n}"
 		},
 		{
 			"label": "letter spacing suffixed string reads its leading number",
@@ -302,7 +302,7 @@
 					"letterSpacing": "50px"
 				}
 			},
-			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    letter-spacing: 0.05em;\n}"
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    letter-spacing: 0.05em;\n    --typost-fit-letter-spacing: 0.05em;\n}"
 		},
 		{
 			"label": "letter spacing junk emits 0em (PHP !empty then intval)",
@@ -312,7 +312,7 @@
 					"letterSpacing": "abc"
 				}
 			},
-			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    letter-spacing: 0em;\n}"
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    letter-spacing: 0em;\n    --typost-fit-letter-spacing: 0em;\n}"
 		},
 		{
 			"label": "letter spacing \"0\" is empty",
@@ -665,7 +665,7 @@
 					"textColor": "#336699"
 				}
 			},
-			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-family: var(--font-3);\n    font-weight: 600;\n    font-style: italic;\n    font-feature-settings: \"liga\" 1, \"onum\" 1;\n    letter-spacing: 0.02em;\n    line-height: 1.4;\n    font-variation-settings: \"wght\" 600;\n    font-size: clamp(1.125rem, 1.25rem + 0.625vw, 1.75rem);\n    --typost-hang: 0.05;\n    text-transform: capitalize;\n    font-variant-caps: normal;\n    word-spacing: 0.05em;\n    text-wrap: pretty;\n    text-wrap-mode: inherit;\n    -webkit-hyphens: auto;\n    hyphens: auto;\n    color: #336699;\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    color: inherit;\n}\n\n.typost-styled.typost-ps-8:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*=\"text-indent\"])::first-letter {\n    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);\n}\n\n.typost-styled.typost-ps-8.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, [style*=\"text-indent\"]) {\n    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}\n\n.typost-styled.typost-ps-8.has-text-align-center {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 1;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 1;\n}\n\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8:not([style*=\"font-weight\"]) :is(strong, b):not(.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 [style*=\"font-weight\"] *),\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id][data-style-id]:not([style*=\"font-weight\"]) :is(strong, b):not(.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id][data-style-id] [style*=\"font-weight\"] *),\n:is(strong, b) .typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 900;\n}"
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-family: var(--font-3);\n    font-weight: 600;\n    font-style: italic;\n    font-feature-settings: \"liga\" 1, \"onum\" 1;\n    letter-spacing: 0.02em;\n    --typost-fit-letter-spacing: 0.02em;\n    line-height: 1.4;\n    font-variation-settings: \"wght\" 600;\n    font-size: clamp(1.125rem, 1.25rem + 0.625vw, 1.75rem);\n    --typost-hang: 0.05;\n    text-transform: capitalize;\n    font-variant-caps: normal;\n    word-spacing: 0.05em;\n    text-wrap: pretty;\n    text-wrap-mode: inherit;\n    -webkit-hyphens: auto;\n    hyphens: auto;\n    color: #336699;\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    color: inherit;\n}\n\n.typost-styled.typost-ps-8:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*=\"text-indent\"])::first-letter {\n    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);\n}\n\n.typost-styled.typost-ps-8.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, [style*=\"text-indent\"]) {\n    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}\n\n.typost-styled.typost-ps-8.has-text-align-center {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 1;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 1;\n}\n\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8:not([style*=\"font-weight\"]) :is(strong, b):not(.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 [style*=\"font-weight\"] *),\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id][data-style-id]:not([style*=\"font-weight\"]) :is(strong, b):not(.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id][data-style-id] [style*=\"font-weight\"] *),\n:is(strong, b) .typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 900;\n}"
 		},
 		{
 			"label": "no properties write nothing",
@@ -683,7 +683,7 @@
 					"letterSpacing": 1.9
 				}
 			},
-			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    letter-spacing: 0.001em;\n}"
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    letter-spacing: 0.001em;\n    --typost-fit-letter-spacing: 0.001em;\n}"
 		},
 		{
 			"label": "line height suffixed string reads its leading number (PHP floatval)",
