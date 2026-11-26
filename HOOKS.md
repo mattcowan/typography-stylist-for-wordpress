@@ -374,7 +374,7 @@ add_filter('typost_force_enqueue_font_ids', function($ids) {
 - Return an array of positive integer font IDs; invalid entries are discarded.
 - Forced IDs are resolved through the font-replacement chain, so referencing a deleted font's ID loads its replacement (and keeps the alias variable).
 - Forcing any ID causes the `--font-N` variables `<style>` block and the frontend stylesheet handle to be output on all pages.
-- Since 2.4.0, a frontend page declares only the `--font-N` variables of the fonts that it uses. Theme CSS that writes `var(--font-N)` must add its fonts with this filter.
+- Since 2.4.0, a frontend page declares only the `--font-N` variables of the fonts that it uses. Theme CSS that writes `var(--font-N)` must add its fonts with this filter. In a block theme, the fonts of the blocks that the template renders (template parts, synced patterns, query loops) load without this filter.
 - The result is memoized per request and feeds transient cache keys — callbacks must return stable output for a given request.
 
 #### `typost_content_font_ids`

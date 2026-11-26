@@ -589,6 +589,7 @@ describe('buildStyleCssBlock', () => {
 			'    font-style: italic;\n' +
 			'    font-feature-settings: "liga" 1, "ss01" 1;\n' +
 			'    letter-spacing: 0.05em;\n' +
+			'    --typost-fit-letter-spacing: 0.05em;\n' +
 			'    line-height: 1.4;\n' +
 			'    font-size: 24px;\n' +
 			'}\n\n' +
@@ -1092,6 +1093,7 @@ describe('case (#214)', () => {
 			head +
 			'    font-family: var(--font-9);\n' +
 			'    letter-spacing: 0.1em;\n' +
+			'    --typost-fit-letter-spacing: 0.1em;\n' +
 			'    text-transform: uppercase;\n' +
 			'    font-variant-caps: normal;\n' +
 			'}'

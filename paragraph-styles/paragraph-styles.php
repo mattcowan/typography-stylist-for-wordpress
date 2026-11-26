@@ -85,10 +85,10 @@ final class Typost_Paragraph_Styles {
 	const CACHE_KEY = 'typost_paragraph_styles_cache';
 
 	/** @var string Transient key for caching generated CSS */
-	// Renamed when the generated CSS changes (v2: #315, v3: #450), so an
-	// update never serves CSS cached by the previous version for up to 12
-	// hours.
-	const CSS_CACHE_KEY = 'typost_paragraph_styles_css_v3';
+	// Renamed when the generated CSS changes (v2: #315, v3: #450, v4:
+	// #458), so an update never serves CSS cached by the previous version
+	// for up to 12 hours.
+	const CSS_CACHE_KEY = 'typost_paragraph_styles_css_v4';
 
 	/** @var string Option storing whether the block toolbar gets a direct styles button */
 	const TOOLBAR_OPTION = 'typost_ps_toolbar_button';
@@ -718,9 +718,14 @@ final class Typost_Paragraph_Styles {
 			$css_rules[] = 'font-feature-settings: ' . implode( ', ', $features );
 		}
 
-		// Letter spacing
+		// Letter spacing. Also as a custom property, which a fit-to-width
+		// line reads (core's style.css), so it resolves the em value at its
+		// own size and not at the heading's (#458). ps-utils.js
+		// buildStyleCssBlock() emits the same.
 		if ( ! empty( $props['letterSpacing'] ) ) {
-			$css_rules[] = 'letter-spacing: ' . ( intval( $props['letterSpacing'] ) / 1000 ) . 'em';
+			$letter_spacing = ( intval( $props['letterSpacing'] ) / 1000 ) . 'em';
+			$css_rules[]    = 'letter-spacing: ' . $letter_spacing;
+			$css_rules[]    = '--typost-fit-letter-spacing: ' . $letter_spacing;
 		}
 
 		// Line height
@@ -2114,7 +2119,8 @@ final class Typost_Paragraph_Styles {
 	 *
 	 * A First line rule is `::first-line` on the paragraph with the
 	 * declarations of the style it applies that a first line can take (no
-	 * hang, no line breaking, no alignment or layout). Its features follow
+	 * hang, no line breaking, no alignment or layout, and not the letter
+	 * spacing copy that only fit lines read, #458). Its features follow
 	 * the paragraph's own, as in the spans. The spans of the rules before it
 	 * sit inside the first line: a property their style sets wins there,
 	 * the others come from the first line. Fit-to-width text is left out,
@@ -2145,7 +2151,7 @@ final class Typost_Paragraph_Styles {
 			$declarations = array();
 			foreach ( self::property_declarations( $props ) as $declaration ) {
 				$property = substr( $declaration, 0, (int) strpos( $declaration, ':' ) );
-				if ( in_array( $property, array( '--typost-hang', 'text-wrap', 'text-wrap-mode', '-webkit-hyphens', 'hyphens', 'hyphenate-limit-chars', '-webkit-hyphenate-character', 'hyphenate-character' ), true ) ) {
+				if ( in_array( $property, array( '--typost-hang', '--typost-fit-letter-spacing', 'text-wrap', 'text-wrap-mode', '-webkit-hyphens', 'hyphens', 'hyphenate-limit-chars', '-webkit-hyphenate-character', 'hyphenate-character' ), true ) ) {
 					continue;
 				}
 				if ( 'font-feature-settings' === $property && ! empty( $own_features ) ) {

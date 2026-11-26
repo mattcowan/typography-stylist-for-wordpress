@@ -171,6 +171,67 @@ describe('buildFitLineSizeProperties', () => {
 	});
 });
 
+describe('useFitMeasurement: the probe renders the attributes the heading renders (#458)', () => {
+	// A style apply copies the style's values into the attributes, and a
+	// style with no weight gives fontWeight '400'. Under the style that copy
+	// does not render (buildEditorStyle(), save.js): the heading shows the
+	// theme's weight. The probe measured at 400 anyway, so in a theme with
+	// bold headings the lines were 5% to 8% wider than the box.
+	const STYLED = { styleClass: 'typost-ps-9', fontWeight: '400', fontId: 12, fontStyle: 'italic', letterSpacing: -30, features: ['liga'], fontVariationSettings: '"wght" 650', textCase: 'uppercase' };
+	let probeStyle;
+	let rectSpy;
+
+	beforeEach(() => {
+		jest.useFakeTimers();
+		document.body.innerHTML = '<div data-block="fit-block"><h2 class="typost-block-content typost-styled typost-fit typost-ps-9"></h2></div>';
+		probeStyle = null;
+		rectSpy = jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
+			if (this.style.left === '-9999px' && !probeStyle) {
+				probeStyle = {
+					fontFamily: this.style.fontFamily,
+					fontWeight: this.style.fontWeight,
+					fontStyle: this.style.fontStyle,
+					letterSpacing: this.style.letterSpacing,
+					fontFeatureSettings: this.style.fontFeatureSettings,
+					fontVariationSettings: this.style.fontVariationSettings,
+					textTransform: this.style.textTransform,
+				};
+			}
+			return { width: 500, height: 100, top: 0, left: 0, right: 500, bottom: 100, x: 0, y: 0 };
+		});
+	});
+
+	afterEach(() => {
+		rectSpy.mockRestore();
+		jest.useRealTimers();
+		document.body.innerHTML = '';
+	});
+
+	function measureProbe(props) {
+		renderHook((p) => useFitMeasurement(p), { initialProps: blockProps(props) });
+		act(() => {
+			jest.advanceTimersByTime(400);
+		});
+		return probeStyle;
+	}
+
+	const NONE = { fontFamily: '', fontWeight: '', fontStyle: '', letterSpacing: '', fontFeatureSettings: '', fontVariationSettings: '', textTransform: '' };
+	const ALL = { fontFamily: 'var(--font-12)', fontWeight: '400', fontStyle: 'italic', letterSpacing: '-0.03em', fontFeatureSettings: '"liga" 1', fontVariationSettings: '"wght" 650', textTransform: 'uppercase' };
+
+	it('under a paragraph style, sets none of the block attributes the style class renders', () => {
+		expect(measureProbe(Object.assign({ styleOverrides: {} }, STYLED))).toEqual(NONE);
+	});
+
+	it('under a paragraph style, sets only the attributes the block overrides', () => {
+		expect(measureProbe(Object.assign({ styleOverrides: { fontWeight: true, letterSpacing: true } }, STYLED)))
+			.toEqual(Object.assign({}, NONE, { fontWeight: '400', letterSpacing: '-0.03em' }));
+	});
+
+	it('without a paragraph style, sets every attribute, as before', () => {
+		expect(measureProbe(Object.assign({}, STYLED, { styleClass: '', styleOverrides: null }))).toEqual(ALL);
+	});
+});
+
 describe('useFitMeasurement: the measurement write', () => {
 	// jsdom lays nothing out: the probe reports 500px as one line and 250px
 	// at min-content

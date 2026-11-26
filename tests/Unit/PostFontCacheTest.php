@@ -168,7 +168,9 @@ class PostFontCacheTest extends TestCase {
 
     private function saveWithStatus($status, $id = 7) {
         Functions\when('get_post_status')->justReturn($status);
-        $this->plugin()->on_post_save($id, (object) ['ID' => $id, 'post_status' => $status], true);
+        // A post: only content post types clear (#483, PostSaveScopeTest)
+        Functions\when('is_post_type_viewable')->justReturn(true);
+        $this->plugin()->on_post_save($id, (object) ['ID' => $id, 'post_type' => 'post', 'post_status' => $status], true);
     }
 
     private function archiveCacheDeletes() {
