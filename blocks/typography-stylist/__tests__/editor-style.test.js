@@ -64,6 +64,15 @@ describe('buildEditorStyle without a paragraph style', () => {
 		expect(buildEditorStyle(block({ fontSize: 'fit', sizePreviewUnit: 'px' })).fontSize).toMatch(/^clamp\(16px, /);
 	});
 
+	it('gives a fit block its letter spacing as the property its lines read (#458)', () => {
+		expect(buildEditorStyle(block({ fontSize: 'fit', letterSpacing: -30 }))).toMatchObject({
+			letterSpacing: '-0.03em',
+			'--typost-fit-letter-spacing': '-0.03em',
+		});
+		expect(buildEditorStyle(block({ fontSize: 'fit' }))).not.toHaveProperty('--typost-fit-letter-spacing');
+		expect(buildEditorStyle(block({ fontSize: 'responsive', letterSpacing: 50 }))).not.toHaveProperty('--typost-fit-letter-spacing');
+	});
+
 	it('writes a fixed size as a length, and no size for 0', () => {
 		expect(buildEditorStyle(block({ fontSize: '24', sizePreviewUnit: 'px' })).fontSize).toBe('24px');
 		expect(buildEditorStyle(block({ fontSize: '24' })).fontSize).toBe('1.5rem');
@@ -84,6 +93,11 @@ describe('buildEditorStyle under a paragraph style', () => {
 			styleOverrides: { letterSpacing: true },
 		}));
 		expect(style).toEqual({ letterSpacing: '0.02em' });
+	});
+
+	it('leaves a fit block\'s letter spacing property to the style unless the block overrides it (#458)', () => {
+		expect(buildEditorStyle(block({ fontSize: 'fit', letterSpacing: 20, styleOverrides: {} }))).not.toHaveProperty('--typost-fit-letter-spacing');
+		expect(buildEditorStyle(block({ fontSize: 'fit', letterSpacing: 20, styleOverrides: { letterSpacing: true } }))['--typost-fit-letter-spacing']).toBe('0.02em');
 	});
 
 	it('writes a hang override even at 0, so the block can cancel the style', () => {

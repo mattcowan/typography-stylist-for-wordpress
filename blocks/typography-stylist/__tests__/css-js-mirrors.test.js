@@ -3,12 +3,14 @@
  *
  * Each case reads the stylesheet rule a JS function mirrors and checks that
  * the two agree, or checks a value the block writes against the code that
- * reads it back (the fit line sizes, shared with PHP through
- * tests/fixtures/fit-line-sizes.json). docs/twins.md lists every twin.
+ * reads it back (the fit line sizes and the fit letter spacing, shared with
+ * PHP through tests/fixtures/fit-line-sizes.json and
+ * tests/fixtures/fit-letter-spacing.json). docs/twins.md lists every twin.
  */
 
 import { create } from 'react-test-renderer';
 import { initialHangApplies, buildFitFontSize, resolveBlockFontFamilyStyle } from '../utils';
+import buildEditorStyle from '../editor-style';
 
 jest.mock('@wordpress/block-editor');
 
@@ -71,6 +73,31 @@ describe('fit lines that grow with zoom (style.css and buildFitFontSize)', () =>
 		expect(styleCss).toMatch(new RegExp(rule[1] + ':\\s*32rem'));
 		expect(buildFitFontSize(0.25, 0, 'rem', 0.4)).toContain('var(' + rule[1] + ', 100cqi)');
 		expect(buildFitFontSize(0.25, 0, 'px')).not.toContain(rule[1]);
+	});
+});
+
+describe('fit letter spacing (shared fixture with the PHP render filter, #458)', () => {
+	const fixture = require('../../../tests/fixtures/fit-letter-spacing.json');
+	const PROPERTY = '--typost-fit-letter-spacing';
+	const fitAttributes = (letterSpacing) => ({ content: 'Moonlit<br>garden', tagName: 'h2', features: [], fontSize: 'fit', fontSizeUnit: 'rem', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fontWeight: '', letterSpacing, fitLineSizes: [0.3, 0.4] });
+
+	test('the fixture is read', () => {
+		// A control: an empty list would let every case pass by never running
+		expect(fixture.cases.length).toBeGreaterThanOrEqual(5);
+	});
+
+	test('the fit line rule in style.css reads the property', () => {
+		expect(styleCss).toMatch(new RegExp('\\.wp-block-typost \\.typost-fit \\.typost-line \\{\\s*letter-spacing: var\\(' + PROPERTY + '\\);\\s*\\}'));
+	});
+
+	test.each(fixture.cases.map((c) => [c.label, c]))('%s', (label, c) => {
+		// save() writes the value the PHP filter copies
+		const visual = create(save({ attributes: fitAttributes(c.letterSpacing) })).toJSON().children[1];
+		expect(visual.props.style.letterSpacing).toBe(c.value);
+		// The editor writes the same value as the property
+		const editor = buildEditorStyle(Object.assign(fitAttributes(c.letterSpacing), { fontId: 0, fontFamily: '', fontStyle: '', lineHeight: 0, sizePreviewUnit: 'rem', styleOverrides: null, fontVariationSettings: '', textAlign: '', initialHang: 0, textCase: '', fakeSmallCaps: true }));
+		expect(editor.letterSpacing).toBe(c.value);
+		expect(editor[PROPERTY]).toBe(c.value);
 	});
 });
 

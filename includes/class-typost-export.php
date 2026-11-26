@@ -78,9 +78,13 @@ class Typost_Export {
         'typost_admin_font_css'                   => 'Cache.',
         'typost_editor_font_css'                  => 'Cache.',
         'typost_block_font_css'                   => 'Cache.',
+        'typost_css_variable_decls'               => 'Cache.',
+        'typost_css_variables'                    => 'Cache (before 2.4.0).',
         'typost_paragraph_styles_cache'           => 'Cache.',
         'typost_paragraph_styles_css'             => 'Cache.',
         'typost_paragraph_styles_css_v2'          => 'Cache.',
+        'typost_paragraph_styles_css_v3'          => 'Cache.',
+        'typost_paragraph_styles_css_v4'          => 'Cache.',
         'typost_vf_axes_cache'                    => 'Cache.',
     );
 

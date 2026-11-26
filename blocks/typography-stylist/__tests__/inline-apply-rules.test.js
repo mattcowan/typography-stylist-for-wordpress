@@ -12,8 +12,101 @@ const {
 	resolvePresetFontState,
 	resolveApplyWeightChoice,
 	resolveSpanExplicitFontId,
+	resolveStyleSpanAttributes,
 	resolveSetFontWeight,
 } = require('../../../assets/js/inline-apply-rules.js');
+
+describe('resolveStyleSpanAttributes (inline editor readers, #450)', () => {
+	// The style now. The spans below were styled when it had other values.
+	const styles = [{
+		id: 12,
+		properties: {
+			fontId: 9,
+			fontWeight: '300',
+			fontStyle: 'normal',
+			features: ['liga', 'onum'],
+			letterSpacing: 100,
+			lineHeight: 1.6,
+			fontSize: 'responsive',
+			fontSizeMin: 18,
+			fontSizePreferred: 22,
+			fontSizeMax: 30,
+			textCase: 'small-caps',
+			fakeSmallCaps: false,
+			fontVariationSettings: '"wght" 300',
+		},
+	}, { id: 13, properties: { fontWeight: '700' } }];
+	const old = {
+		'data-style-id': '12',
+		'data-font': 'Old Family',
+		'data-font-id': '4',
+		'data-fontweight': '400',
+		'data-fontstyle': 'italic',
+		'data-features': 'dlig',
+		'data-letterspacing': '50',
+		'data-lineheight': '1.2',
+		'data-fontsize': '24',
+		'data-textcase': 'uppercase',
+		'data-font-variation-settings': '"wght" 500',
+		'data-feature-settings': '"salt" 2',
+		class: 'typost-styled',
+	};
+
+	it('an untouched style span reads the style as it is now', () => {
+		expect(resolveStyleSpanAttributes(old, styles)).toEqual({
+			'data-style-id': '12',
+			'data-font-id': '9',
+			// The weight has its own reader; glyph alternates are glyph-level
+			'data-fontweight': '400',
+			'data-feature-settings': '"salt" 2',
+			'data-fontstyle': 'normal',
+			'data-features': 'liga,onum',
+			'data-letterspacing': '100',
+			'data-lineheight': '1.6',
+			'data-fontsize': 'responsive',
+			'data-fontsize-min': '18',
+			'data-fontsize-preferred': '22',
+			'data-fontsize-max': '30',
+			'data-textcase': 'small-caps',
+			'data-fakesmallcaps': 'false',
+			'data-font-variation-settings': '"wght" 300',
+			class: 'typost-styled',
+		});
+	});
+
+	it('a value the span declares in its style attribute is the text\'s own', () => {
+		const attrs = Object.assign({}, old, { style: 'letter-spacing: 0.05em; font-feature-settings: "dlig" 1; text-transform: uppercase; font-variant-caps: normal' });
+		const out = resolveStyleSpanAttributes(attrs, styles);
+		expect(out['data-letterspacing']).toBe('50');
+		expect(out['data-features']).toBe('dlig');
+		expect(out['data-textcase']).toBe('uppercase');
+		expect(out['data-fakesmallcaps']).toBeUndefined();
+		// Not declared: from the style
+		expect(out['data-lineheight']).toBe('1.6');
+		expect(out['data-fontstyle']).toBe('normal');
+	});
+
+	it('a key the style does not set is removed', () => {
+		const out = resolveStyleSpanAttributes({ 'data-style-id': '13', 'data-features': 'dlig', 'data-fontsize': '24' }, styles);
+		expect(out).toEqual({ 'data-style-id': '13' });
+	});
+
+	it('no style, an unknown style, or no attributes: returned as they are', () => {
+		const plain = { 'data-features': 'dlig' };
+		expect(resolveStyleSpanAttributes(plain, styles)).toBe(plain);
+		const deleted = { 'data-style-id': '99', 'data-features': 'dlig' };
+		expect(resolveStyleSpanAttributes(deleted, styles)).toBe(deleted);
+		const zero = { 'data-style-id': '0', 'data-features': 'dlig' };
+		expect(resolveStyleSpanAttributes(zero, styles)).toBe(zero);
+		expect(resolveStyleSpanAttributes(old, undefined)).toBe(old);
+		expect(resolveStyleSpanAttributes(undefined, styles)).toEqual({});
+	});
+
+	it('a fluid size without its three sizes writes none', () => {
+		const out = resolveStyleSpanAttributes({ 'data-style-id': '5', 'data-fontsize': '24' }, [{ id: 5, properties: { fontSize: 'responsive' } }]);
+		expect(out['data-fontsize']).toBeUndefined();
+	});
+});
 
 describe('resolveSetFontWeight (PR #280 review)', () => {
 	it('a pick in this popover session wins over the stored weight', () => {

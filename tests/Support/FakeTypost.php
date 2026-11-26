@@ -31,8 +31,8 @@ class FakeTypost {
     /** @var int Next font ID to allocate */
     public $next_font_id = 100;
 
-    /** @var string[] Extension checkbox options (the bundled modules register these two) */
-    public $extension_options = array('typost_glyphs_toolbar_button', 'typost_ps_toolbar_button');
+    /** @var string[] Extension checkbox options (the bundled modules register these, #452 the lock) */
+    public $extension_options = array('typost_glyphs_toolbar_button', 'typost_ps_toolbar_button', 'typost_ps_lock_style_changes');
 
     /** @var bool Whether the WordPress Font Library is available */
     public $library_available = true;

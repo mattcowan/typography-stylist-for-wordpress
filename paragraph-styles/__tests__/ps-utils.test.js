@@ -589,8 +589,15 @@ describe('buildStyleCssBlock', () => {
 			'    font-style: italic;\n' +
 			'    font-feature-settings: "liga" 1, "ss01" 1;\n' +
 			'    letter-spacing: 0.05em;\n' +
+			'    --typost-fit-letter-spacing: 0.05em;\n' +
 			'    line-height: 1.4;\n' +
 			'    font-size: 24px;\n' +
+			'}\n\n' +
+			// Bold text in the style: max(700, bolder(700)) (#450)
+			'.typost-styled.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3:not([style*="font-weight"]) :is(strong, b):not(.typost-styled.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3 [style*="font-weight"] *),\n' +
+			'.typost-styled[data-style-id="3"][data-style-id][data-style-id][data-style-id][data-style-id][data-style-id]:not([style*="font-weight"]) :is(strong, b):not(.typost-styled[data-style-id="3"][data-style-id][data-style-id][data-style-id][data-style-id][data-style-id] [style*="font-weight"] *),\n' +
+			':is(strong, b) .typost-styled[data-style-id="3"][data-style-id][data-style-id][data-style-id][data-style-id] {\n' +
+			'    font-weight: 900;\n' +
 			'}'
 		);
 	});
@@ -1086,6 +1093,7 @@ describe('case (#214)', () => {
 			head +
 			'    font-family: var(--font-9);\n' +
 			'    letter-spacing: 0.1em;\n' +
+			'    --typost-fit-letter-spacing: 0.1em;\n' +
 			'    text-transform: uppercase;\n' +
 			'    font-variant-caps: normal;\n' +
 			'}'

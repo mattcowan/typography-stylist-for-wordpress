@@ -159,6 +159,23 @@
 	hyphens: manual !important;
 }
 
+/* Letter spacing at each line's own size (#458). The block's letter spacing
+ * (inline) and a paragraph style's (its class rule) are declared in em on
+ * the heading. An em value is resolved where it is declared, so every line
+ * inherited it at the heading's fallback font size, while fit measurement
+ * measured it at the line's size: negative spacing made lines wider than
+ * the box, positive spacing made them narrower. A custom property inherits
+ * the em value unresolved, so each line resolves it at its own size. The
+ * frontend gets it from the render_block filter
+ * (Typost::add_fit_letter_spacing_property()), the editor from
+ * buildEditorStyle(), a paragraph style from its class rule. Without the
+ * property the declaration is invalid at computed-value time and the line
+ * inherits the heading's letter spacing, as before (a theme's own spacing
+ * on headings, or a fit block with no letter spacing). */
+.wp-block-typost .typost-fit .typost-line {
+	letter-spacing: var(--typost-fit-letter-spacing);
+}
+
 /* Fit-to-width lines take no first line indent (#348). text-indent inherits,
  * and on the frontend every line is a block, so the block's own Line indent
  * (on the wrapper) or a theme's paragraph indent would indent every line and

@@ -85,15 +85,19 @@ final class Typost_Paragraph_Styles {
 	const CACHE_KEY = 'typost_paragraph_styles_cache';
 
 	/** @var string Transient key for caching generated CSS */
-	// Renamed when the generated CSS changes (v2: #315), so an update never
-	// serves CSS cached by the previous version for up to 12 hours.
-	const CSS_CACHE_KEY = 'typost_paragraph_styles_css_v2';
+	// Renamed when the generated CSS changes (v2: #315, v3: #450, v4:
+	// #458), so an update never serves CSS cached by the previous version
+	// for up to 12 hours.
+	const CSS_CACHE_KEY = 'typost_paragraph_styles_css_v4';
 
 	/** @var string Option storing whether the block toolbar gets a direct styles button */
 	const TOOLBAR_OPTION = 'typost_ps_toolbar_button';
 
 	/** @var string Flag: the one-time switch that turned the toolbar button on has run (#322) */
 	const TOOLBAR_DEFAULT_ON_FLAG = 'typost_ps_toolbar_button_default_on';
+
+	/** @var string Option: only users with manage_options create, change and delete styles (#452) */
+	const LOCK_OPTION = 'typost_ps_lock_style_changes';
 
 	/** @var string REST namespace (shared with core plugin) */
 	const REST_NAMESPACE = 'typost/v1';
@@ -291,6 +295,7 @@ final class Typost_Paragraph_Styles {
 
 		// Optional toolbar button setting (Options tab)
 		add_action( 'typost_admin_options_rows', array( $this, 'render_options_row' ) );
+		add_action( 'typost_admin_options_rows', array( $this, 'render_lock_options_row' ) );
 		add_filter( 'typost_admin_options_checkboxes', array( $this, 'register_option_key' ) );
 		add_filter( 'typost_export_option_details', array( $this, 'export_option_details' ) );
 		add_action( 'admin_init', array( $this, 'maybe_turn_on_toolbar_button' ) );
@@ -545,7 +550,133 @@ final class Typost_Paragraph_Styles {
 			$css .= self::core_block_hang_css( $id );
 		}
 
+		// Bold and emphasis on styled text (#450)
+		$emphasis_refs = array( (string) $id );
+		if ( ! empty( $style['legacyId'] ) ) {
+			$emphasis_refs[] = esc_attr( $style['legacyId'] );
+		}
+		$emphasis_css = self::emphasis_css( $props, $emphasis_refs );
+		if ( '' !== $emphasis_css ) {
+			$css .= "\n\n" . $emphasis_css;
+		}
+
 		return $css;
+	}
+
+	/**
+	 * The bold and emphasis rules of a style (#450).
+	 *
+	 * The browser's bold is `font-weight: bolder`, relative to the parent,
+	 * so bold text inside a style with weight 300 showed at 400. And a
+	 * `<strong>` around a style span lost to the span's own weight. The
+	 * first rule gives the weight from bold_weight() to bold text inside
+	 * the style (block or span) and to a style span inside bold text. It is
+	 * written only for a style that sets a weight. Three selectors per ref:
+	 *
+	 * - Bold inside a block with the style: (0,14,1), over the style rule.
+	 * - Bold inside a style span: (0,16,1), so the span, which is nearer to
+	 *   the text, wins over a block style around it.
+	 * - Neither form applies to a block or span whose own style attribute
+	 *   sets a weight (the block's own font weight, or an author's change on
+	 *   a span, #450), or to bold inside an element within it whose style
+	 *   attribute sets a weight (an author's weight on part of the text):
+	 *   bold there keeps the browser's bolder, relative to that weight. The
+	 *   second test is the `:not(<owner> [style*="font-weight"] *)` at the
+	 *   end of each selector; its argument counts in the specificity above.
+	 *   `:not()` with a complex selector needs the same browsers as `:is()`.
+	 *   `[style*="font-weight"]` is a substring test, not an
+	 *   exact property match: it also matches `--x-font-weight` or
+	 *   `font-weight` inside a value. The plugin writes neither in a
+	 *   style attribute (an author can add one only by editing the HTML),
+	 *   and a false match only gives bold there the browser's bolder, as
+	 *   before #450.
+	 * - A style span anywhere inside bold text, with formats such as `<em>`
+	 *   or a link between them (RichText nests formats in the order they
+	 *   were applied): (0,6,1), over the style rule's (0,6,0). An inline
+	 *   `font-weight` on the span still wins.
+	 *
+	 * Emphasis inside the style keeps the browser's italic, because the
+	 * `<em>` declares its own font-style. Only a style span inside `<em>`
+	 * or `<i>` lost it, to a style that sets `font-style: normal`: the
+	 * second rule, written only for that value, gives it back. A span whose
+	 * own style attribute sets a font-style keeps it (inline wins).
+	 *
+	 * buildStyleCssBlock() in ps-utils.js emits the same text.
+	 *
+	 * @param array    $props Resolved properties.
+	 * @param string[] $refs  The style's id, then its legacy id when it has one.
+	 * @return string CSS, '' for none.
+	 */
+	private static function emphasis_css( $props, $refs ) {
+		$css    = array();
+		$weight = self::bold_weight( $props );
+		if ( $weight > 0 ) {
+			$selectors = array();
+			foreach ( $refs as $ref ) {
+				$block       = '.typost-styled' . str_repeat( '.typost-ps-' . $ref, 5 );
+				$span        = self::span_selector( $ref ) . '[data-style-id]';
+				$selectors[] = $block . ':not([style*="font-weight"]) :is(strong, b):not(' . $block . ' [style*="font-weight"] *)';
+				$selectors[] = $span . ':not([style*="font-weight"]) :is(strong, b):not(' . $span . ' [style*="font-weight"] *)';
+				$selectors[] = ':is(strong, b) ' . self::span_selector( $ref );
+			}
+			$css[] = implode( ",\n", $selectors ) . " {\n    font-weight: " . $weight . ";\n}";
+		}
+		if ( ! empty( $props['fontStyle'] ) && 'normal' === $props['fontStyle'] ) {
+			$selectors = array();
+			foreach ( $refs as $ref ) {
+				$selectors[] = ':is(em, i) ' . self::span_selector( $ref );
+			}
+			$css[] = implode( ",\n", $selectors ) . " {\n    font-style: italic;\n}";
+		}
+		return implode( "\n\n", $css );
+	}
+
+	/**
+	 * The inline-span selector of a style, (0,6,0), as the style rule
+	 * writes it.
+	 *
+	 * @param string $ref Style id or legacy id.
+	 * @return string Selector.
+	 */
+	private static function span_selector( $ref ) {
+		return '.typost-styled[data-style-id="' . $ref . '"][data-style-id][data-style-id][data-style-id][data-style-id]';
+	}
+
+	/**
+	 * The weight of bold text in a style (#450), or 0 when the style needs
+	 * no bold rule: max(700, bolder(W)), where bolder() is the CSS Fonts
+	 * table the browser uses for `<strong>`. So a style under 550 gives
+	 * 700, a style from 550 to 899 gives 900, and a style at 900 or more
+	 * keeps its weight. Bold is then always visible, and as heavy as the
+	 * browser makes it today; the browser's font matching picks the
+	 * nearest face the font has.
+	 *
+	 * Reads the weight as property_declarations() does. `normal` is 400
+	 * (700) and `bold` is 700 (900). `lighter` and `bolder` are relative to
+	 * a parent weight that the style does not know, so they give no rule:
+	 * bold text there keeps the browser's bolder.
+	 *
+	 * @param array $props Resolved properties.
+	 * @return int Weight, 0 for none.
+	 */
+	private static function bold_weight( $props ) {
+		if ( empty( $props['fontWeight'] ) ) {
+			return 0;
+		}
+		$weight = $props['fontWeight'];
+		if ( is_numeric( $weight ) && $weight >= 1 && $weight <= 1000 ) {
+			$weight = intval( $weight );
+		} elseif ( 'normal' === $weight ) {
+			$weight = 400;
+		} elseif ( 'bold' === $weight ) {
+			$weight = 700;
+		} else {
+			return 0;
+		}
+		if ( $weight < 550 ) {
+			return 700;
+		}
+		return $weight < 900 ? 900 : $weight;
 	}
 
 	/**
@@ -587,9 +718,14 @@ final class Typost_Paragraph_Styles {
 			$css_rules[] = 'font-feature-settings: ' . implode( ', ', $features );
 		}
 
-		// Letter spacing
+		// Letter spacing. Also as a custom property, which a fit-to-width
+		// line reads (core's style.css), so it resolves the em value at its
+		// own size and not at the heading's (#458). ps-utils.js
+		// buildStyleCssBlock() emits the same.
 		if ( ! empty( $props['letterSpacing'] ) ) {
-			$css_rules[] = 'letter-spacing: ' . ( intval( $props['letterSpacing'] ) / 1000 ) . 'em';
+			$letter_spacing = ( intval( $props['letterSpacing'] ) / 1000 ) . 'em';
+			$css_rules[]    = 'letter-spacing: ' . $letter_spacing;
+			$css_rules[]    = '--typost-fit-letter-spacing: ' . $letter_spacing;
 		}
 
 		// Line height
@@ -1983,7 +2119,8 @@ final class Typost_Paragraph_Styles {
 	 *
 	 * A First line rule is `::first-line` on the paragraph with the
 	 * declarations of the style it applies that a first line can take (no
-	 * hang, no line breaking, no alignment or layout). Its features follow
+	 * hang, no line breaking, no alignment or layout, and not the letter
+	 * spacing copy that only fit lines read, #458). Its features follow
 	 * the paragraph's own, as in the spans. The spans of the rules before it
 	 * sit inside the first line: a property their style sets wins there,
 	 * the others come from the first line. Fit-to-width text is left out,
@@ -2014,7 +2151,7 @@ final class Typost_Paragraph_Styles {
 			$declarations = array();
 			foreach ( self::property_declarations( $props ) as $declaration ) {
 				$property = substr( $declaration, 0, (int) strpos( $declaration, ':' ) );
-				if ( in_array( $property, array( '--typost-hang', 'text-wrap', 'text-wrap-mode', '-webkit-hyphens', 'hyphens', 'hyphenate-limit-chars', '-webkit-hyphenate-character', 'hyphenate-character' ), true ) ) {
+				if ( in_array( $property, array( '--typost-hang', '--typost-fit-letter-spacing', 'text-wrap', 'text-wrap-mode', '-webkit-hyphens', 'hyphens', 'hyphenate-limit-chars', '-webkit-hyphenate-character', 'hyphenate-character' ), true ) ) {
 					continue;
 				}
 				if ( 'font-feature-settings' === $property && ! empty( $own_features ) ) {
@@ -2606,6 +2743,9 @@ final class Typost_Paragraph_Styles {
 			'themeColors'   => self::get_theme_colors(),
 			// The editor previews nested styles (#195) where they render
 			'nestedPreview' => self::grep_supported(),
+			// The current user cannot create, change or delete styles (#452).
+			// Cast: an uncast '0' would reach JavaScript as the truthy "0".
+			'styleChangesLocked' => (bool) $this->style_changes_locked_for_current_user(),
 		);
 		return $data;
 	}
@@ -2679,7 +2819,65 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
-	 * Register the toolbar option so core's Options save persists it.
+	 * Whether the lock on style changes is on (#452). Off by default: a new
+	 * install and an updated site store no option. An Options save stores
+	 * '1' or '0', and (bool) '0' is false.
+	 *
+	 * @since 2.4.0
+	 * @return bool
+	 */
+	private function style_changes_lock_enabled() {
+		return (bool) get_option( self::LOCK_OPTION, false );
+	}
+
+	/**
+	 * Whether the current user may not create, change or delete styles: the
+	 * lock is on and the user has no manage_options (#452). Administrators
+	 * keep everything, in the editor and on the settings tab.
+	 *
+	 * @since 2.4.0
+	 * @return bool
+	 */
+	public function style_changes_locked_for_current_user() {
+		return $this->style_changes_lock_enabled() && ! current_user_can( 'manage_options' );
+	}
+
+	/**
+	 * Render the style lock setting into the core Options tab, after the
+	 * toolbar button row (#452).
+	 *
+	 * @since 2.4.0
+	 */
+	public function render_lock_options_row() {
+		?>
+		<tr>
+			<th scope="row">
+				<?php esc_html_e( 'Paragraph Style Changes', 'typost-paragraph-styles' ); ?>
+			</th>
+			<td>
+				<input
+					type="checkbox"
+					id="<?php echo esc_attr( self::LOCK_OPTION ); ?>"
+					name="<?php echo esc_attr( self::LOCK_OPTION ); ?>"
+					value="1"
+					data-typost-option="1"
+					aria-describedby="<?php echo esc_attr( self::LOCK_OPTION ); ?>-description"
+					<?php checked( $this->style_changes_lock_enabled() ); ?>
+				/>
+				<label for="<?php echo esc_attr( self::LOCK_OPTION ); ?>">
+					<?php esc_html_e( 'Only administrators can change paragraph styles', 'typost-paragraph-styles' ); ?>
+				</label>
+				<p class="description" id="<?php echo esc_attr( self::LOCK_OPTION ); ?>-description">
+					<?php esc_html_e( 'When this is on, other users can apply and detach paragraph styles, but they cannot create, update or delete them. Administrators can still change styles in the editor and on the Paragraph Styles tab.', 'typost-paragraph-styles' ); ?>
+				</p>
+			</td>
+		</tr>
+		<?php
+	}
+
+	/**
+	 * Register the toolbar option and the style lock (#452) so core's
+	 * Options save persists them.
 	 *
 	 * @since 1.2.0
 	 * @param array $options Registered option keys.
@@ -2687,11 +2885,13 @@ final class Typost_Paragraph_Styles {
 	 */
 	public function register_option_key( $options ) {
 		$options[] = self::TOOLBAR_OPTION;
+		$options[] = self::LOCK_OPTION;
 		return $options;
 	}
 
 	/**
-	 * Name the toolbar option in export files (#205).
+	 * Name the toolbar option (#205) and the style lock (#452) in export
+	 * files.
 	 *
 	 * @since 2.3.5
 	 * @param array $details Option name => {label, default}.
@@ -2702,6 +2902,10 @@ final class Typost_Paragraph_Styles {
 		$details[ self::TOOLBAR_OPTION ] = array(
 			'label'   => __( 'Add a Paragraph Styles button to the block toolbar', 'typost-paragraph-styles' ),
 			'default' => true,
+		);
+		$details[ self::LOCK_OPTION ] = array(
+			'label'   => __( 'Only administrators can change paragraph styles', 'typost-paragraph-styles' ),
+			'default' => false,
 		);
 		return $details;
 	}
@@ -2723,7 +2927,7 @@ final class Typost_Paragraph_Styles {
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( $this, 'rest_create_style' ),
-				'permission_callback' => array( $this, 'check_permissions' ),
+				'permission_callback' => array( $this, 'check_write_permissions' ),
 			),
 		) );
 
@@ -2731,12 +2935,12 @@ final class Typost_Paragraph_Styles {
 			array(
 				'methods'             => 'PATCH',
 				'callback'            => array( $this, 'rest_update_style' ),
-				'permission_callback' => array( $this, 'check_permissions' ),
+				'permission_callback' => array( $this, 'check_write_permissions' ),
 			),
 			array(
 				'methods'             => WP_REST_Server::DELETABLE,
 				'callback'            => array( $this, 'rest_delete_style' ),
-				'permission_callback' => array( $this, 'check_permissions' ),
+				'permission_callback' => array( $this, 'check_write_permissions' ),
 			),
 		) );
 
@@ -2766,6 +2970,43 @@ final class Typost_Paragraph_Styles {
 	 */
 	public function check_permissions() {
 		return current_user_can( 'edit_posts' );
+	}
+
+	/**
+	 * Permission check for the routes that create, change and delete a
+	 * style (#452): check_permissions(), and with "Only administrators can
+	 * change paragraph styles" on, manage_options too. The editor hides its
+	 * buttons for such a user; this is what stops a direct request. The
+	 * settings tab sends the same requests, and only administrators open it.
+	 * The read routes keep check_permissions().
+	 *
+	 * All style writes that a user without manage_options can start go
+	 * through these three routes. The other writers of the styles option
+	 * do not need the lock: import (Typost_PS_Transfer calls
+	 * save_imported_styles() from the core import route) needs
+	 * manage_options, and maybe_migrate_ids() is a one-time ID migration
+	 * when the module loads, which changes no style settings. A new route
+	 * or path that writes styles must use this check.
+	 *
+	 * The write limit (rest_dispatch_request) runs after this check, so a
+	 * refused request uses no write.
+	 *
+	 * @since 2.4.0
+	 * @return bool|WP_Error True when allowed, false without edit_posts, a
+	 *                       403 WP_Error when the lock refuses the user.
+	 */
+	public function check_write_permissions() {
+		if ( ! $this->check_permissions() ) {
+			return false;
+		}
+		if ( $this->style_changes_locked_for_current_user() ) {
+			return new WP_Error(
+				'rest_forbidden',
+				__( 'Only administrators can change paragraph styles on this site.', 'typost-paragraph-styles' ),
+				array( 'status' => rest_authorization_required_code() )
+			);
+		}
+		return true;
 	}
 
 	/**
@@ -3119,7 +3360,8 @@ final class Typost_Paragraph_Styles {
 		wp_enqueue_script(
 			'typost-paragraph-styles-editor',
 			TYPOST_PS_PLUGIN_URL . 'assets/js/editor.js',
-			array( 'typost-block-editor', 'typost-paragraph-styles-utils', 'wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch', 'wp-data', 'wp-hooks', 'wp-compose', 'wp-block-editor', 'wp-dom-ready' ),
+			// wp-a11y: the result of Update Style is spoken (#452)
+			array( 'typost-block-editor', 'typost-paragraph-styles-utils', 'wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch', 'wp-data', 'wp-hooks', 'wp-compose', 'wp-block-editor', 'wp-dom-ready', 'wp-a11y' ),
 			TYPOST_PS_VERSION,
 			true
 		);

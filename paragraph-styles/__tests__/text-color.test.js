@@ -54,7 +54,11 @@ describe('buildStyleCssBlock (shared fixture)', () => {
 	test('a style without the new properties writes what it wrote before', () => {
 		expect(buildStyleCssBlock({ id: 8, properties: { fontWeight: '700' } })).toBe(
 			'.typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n' +
-			'.typost-styled[data-style-id="8"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 700;\n}'
+			'.typost-styled[data-style-id="8"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 700;\n}' +
+			// The bold rule of a style with a weight (#450), not a color rule
+			'\n\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8:not([style*="font-weight"]) :is(strong, b):not(.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 [style*="font-weight"] *),\n' +
+			'.typost-styled[data-style-id="8"][data-style-id][data-style-id][data-style-id][data-style-id][data-style-id]:not([style*="font-weight"]) :is(strong, b):not(.typost-styled[data-style-id="8"][data-style-id][data-style-id][data-style-id][data-style-id][data-style-id] [style*="font-weight"] *),\n' +
+			':is(strong, b) .typost-styled[data-style-id="8"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 900;\n}'
 		);
 	});
 
