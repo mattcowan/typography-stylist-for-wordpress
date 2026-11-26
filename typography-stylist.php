@@ -2998,6 +2998,11 @@ class Typost {
      * plus all archive page caches (which cannot be targeted by post ID because
      * they use MD5 hashes of serialized post ID arrays as cache keys).
      *
+     * The archive caches go with a wildcard row delete. Under a persistent
+     * object cache (Redis, Memcached) the transients are not in the options
+     * table, so this also flushes the whole object cache; without one it
+     * does not flush (#484).
+     *
      * Does NOT clear global font CSS caches (admin_font_css, editor_font_css,
      * block_font_css, css_variable_decls) because those only change when fonts
      * themselves are added/removed/modified. Does NOT clear font_css_* caches
@@ -3005,6 +3010,7 @@ class Typost {
      * change, a new cache key is generated automatically.
      *
      * @since 1.1.9
+     * @since 2.4.0 Flushes the object cache only under a persistent object cache.
      * @access private
      *
      * @param int $post_id Post ID whose caches should be cleared.
@@ -3039,8 +3045,13 @@ class Typost {
         );
         // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
-        // Flush object cache to clear archive transients stored in persistent cache (Redis, Memcached)
-        wp_cache_flush();
+        // The row delete does not reach a persistent object cache, where the
+        // archive transients live and get_transient() would keep answering
+        // from them. Without one the flush only emptied the per-request cache
+        // (#484), as in clear_font_detection_cache().
+        if (wp_using_ext_object_cache()) {
+            wp_cache_flush();
+        }
     }
 
     /**
