@@ -221,11 +221,16 @@ function isSuggestionsListEmpty(root) {
  * it highlighted for the earlier text, and Enter picks that row: type "Bo",
  * then "zzzz", press Enter, and Bookmania applies with no row in sight
  * (checked in WordPress 7.1.5, `selectedSuggestion` in
- * packages/components/src/combobox-control). Core's key handler returns
- * early for an event whose default is already prevented, so this capture
- * listener on the wrapper prevents Enter while the open list is empty.
- * Nothing applies, and core does not say "Item selected.". Enter with a
- * row in the list, and Enter on a closed field, work as before.
+ * packages/components/src/combobox-control). While the open list is empty,
+ * this capture listener on the wrapper prevents Enter and stops its
+ * propagation. Core's key handler returns early for a prevented event from
+ * WordPress 6.4 (wp/6.4 combobox-control/index.tsx), but in 5.8 it does not
+ * check `defaultPrevented` (wp/5.8 combobox-control/index.js, `onKeyDown`).
+ * Stopping propagation in the capture phase keeps the event from reaching
+ * the React root listener that runs core's handler, so the guard works on
+ * every supported version. Nothing applies, and core does not say "Item
+ * selected.". Enter with a row in the list, and Enter on a closed field,
+ * work as before.
  *
  * @param {Element|null} root Wrapper element around the control.
  * @return {Function} Cleanup.
@@ -243,6 +248,7 @@ function guardEnterWithoutMatches(root) {
 		}
 		if (isSuggestionsListEmpty(root)) {
 			event.preventDefault();
+			event.stopPropagation();
 		}
 	};
 	root.addEventListener('keydown', onKeyDown, true);

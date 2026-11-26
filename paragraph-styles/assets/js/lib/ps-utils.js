@@ -3505,11 +3505,13 @@
 	/**
 	 * Stop Enter from picking a style the list no longer shows. When the
 	 * typed text matches nothing, core's ComboboxControl keeps the row it
-	 * highlighted for the earlier text, and Enter applies that style. Core's
-	 * key handler returns early for an event whose default is already
-	 * prevented, so this capture listener prevents Enter while the open list
-	 * is empty. ES5 twin of guardEnterWithoutMatches() in
-	 * assets/js/font-picker.js, which has the full reasoning.
+	 * highlighted for the earlier text, and Enter applies that style. While
+	 * the open list is empty, this capture listener prevents Enter and stops
+	 * its propagation: core's key handler skips a prevented event from
+	 * WordPress 6.4, but in 5.8 it does not check `defaultPrevented`, so only
+	 * the stopped propagation keeps the event from core there. ES5 twin of
+	 * guardEnterWithoutMatches() in assets/js/font-picker.js, which has the
+	 * full reasoning.
 	 *
 	 * @param {Element|null} root Wrapper element around the control
 	 * @return {Function} Stops the guard
@@ -3527,6 +3529,7 @@
 			}
 			if (isSuggestionsListEmpty(root)) {
 				event.preventDefault();
+				event.stopPropagation();
 			}
 		};
 		root.addEventListener('keydown', onKeyDown, true);

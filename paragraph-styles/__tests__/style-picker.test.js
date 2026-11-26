@@ -243,6 +243,26 @@ describe('Enter with no matching style (core keeps the old highlight)', () => {
 		expect(pressEnter(root.querySelector('input'))).toBe(true);
 	});
 
+	test('a handler below the wrapper that ignores defaultPrevented (core in WordPress 5.8) never sees the blocked Enter', () => {
+		// Core 5.8's onKeyDown picks the highlighted row without checking
+		// event.defaultPrevented, so only the stopped propagation keeps it out.
+		const seen = (listHtml) => {
+			const root = picker(listHtml);
+			guardEnterWithoutMatches(root);
+			const input = root.querySelector('input');
+			let calls = 0;
+			input.addEventListener('keydown', () => {
+				calls++;
+			});
+			pressEnter(input);
+			return calls;
+		};
+		expect(seen('<ul role="listbox"></ul>')).toBe(0);
+		// control: the same handler sees Enter when the list has a row, and when it is closed
+		expect(seen('<ul role="listbox"><li role="option">Body</li></ul>')).toBe(1);
+		expect(seen('')).toBe(1);
+	});
+
 	test('Enter still reaches core when the list shows a row, or the field is closed', () => {
 		const withRow = picker('<ul role="listbox"><li role="option">Body</li></ul>');
 		guardEnterWithoutMatches(withRow);
@@ -360,13 +380,18 @@ describe('twin: the font picker\'s Tab-order helpers (assets/js/font-picker.js)'
 				root.innerHTML = '<input type="text" />' + listHtml;
 				document.body.appendChild(root);
 				const stop = guard(root);
+				const input = root.querySelector('input');
+				let reached = false;
+				input.addEventListener('keydown', () => {
+					reached = true;
+				});
 				const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
-				root.querySelector('input').dispatchEvent(event);
+				input.dispatchEvent(event);
 				stop();
 				root.remove();
-				return event.defaultPrevented;
+				return [event.defaultPrevented, reached];
 			});
-		expect(run3(guardEnterWithoutMatches)).toEqual([true, false, false]);
+		expect(run3(guardEnterWithoutMatches)).toEqual([[true, false], [false, true], [false, true]]);
 		expect(run3(fontPicker.guardEnterWithoutMatches)).toEqual(run3(guardEnterWithoutMatches));
 		lists.forEach((listHtml) => {
 			const root = document.createElement('div');
