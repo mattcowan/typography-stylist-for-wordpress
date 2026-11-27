@@ -9,7 +9,7 @@
  */
 
 import { create } from 'react-test-renderer';
-import { initialHangApplies, buildFitFontSize, resolveBlockFontFamilyStyle } from '../utils';
+import { initialHangApplies, buildFitFontSize, resolveBlockFontFamilyStyle, overrideKeysToMap } from '../utils';
 import buildEditorStyle from '../editor-style';
 
 jest.mock('@wordpress/block-editor');
@@ -90,12 +90,19 @@ describe('fit letter spacing (shared fixture with the PHP render filter, #458)',
 		expect(styleCss).toMatch(new RegExp('\\.wp-block-typost \\.typost-fit \\.typost-line \\{\\s*letter-spacing: var\\(' + PROPERTY + '\\);\\s*\\}'));
 	});
 
+	test('the fixture has a case on top of a style', () => {
+		// A control: the #451 override cases are read with their style fields
+		expect(fixture.cases.some((c) => c.styleClass && c.value === 'normal')).toBe(true);
+	});
+
 	test.each(fixture.cases.map((c) => [c.label, c]))('%s', (label, c) => {
+		// On top of a paragraph style: the style class and the override keys
+		const onStyle = c.styleClass ? { styleClass: c.styleClass, overrideKeys: c.overrideKeys } : {};
 		// save() writes the value the PHP filter copies
-		const visual = create(save({ attributes: fitAttributes(c.letterSpacing) })).toJSON().children[1];
+		const visual = create(save({ attributes: Object.assign(fitAttributes(c.letterSpacing), onStyle) })).toJSON().children[1];
 		expect(visual.props.style.letterSpacing).toBe(c.value);
 		// The editor writes the same value as the property
-		const editor = buildEditorStyle(Object.assign(fitAttributes(c.letterSpacing), { fontId: 0, fontFamily: '', fontStyle: '', lineHeight: 0, sizePreviewUnit: 'rem', styleOverrides: null, fontVariationSettings: '', textAlign: '', initialHang: 0, textCase: '', fakeSmallCaps: true }));
+		const editor = buildEditorStyle(Object.assign(fitAttributes(c.letterSpacing), { fontId: 0, fontFamily: '', fontStyle: '', lineHeight: 0, sizePreviewUnit: 'rem', styleOverrides: c.styleClass ? overrideKeysToMap(c.overrideKeys) : null, fontVariationSettings: '', textAlign: '', initialHang: 0, textCase: '', fakeSmallCaps: true }));
 		expect(editor.letterSpacing).toBe(c.value);
 		expect(editor[PROPERTY]).toBe(c.value);
 	});

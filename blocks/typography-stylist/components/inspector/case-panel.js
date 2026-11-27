@@ -12,6 +12,7 @@
 import { PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { isSmallCapsCase, normalizeTextCase } from '../../utils';
+import renderOverrideReset from './override-reset';
 
 /**
  * Block text case and the fake small caps option (#214).
@@ -21,7 +22,7 @@ import { isSmallCapsCase, normalizeTextCase } from '../../utils';
  */
 export default function renderCasePanel(props) {
 	const {
-		fakeSmallCaps, setAttributes, textCase
+		fakeSmallCaps, overrideControls, setAttributes, textCase
 	} = props;
 
 	return (
@@ -59,6 +60,7 @@ export default function renderCasePanel(props) {
 						: __('When the font has no small caps, the text stays in normal case.', 'typography-stylist')}
 				/>
 			)}
+			{renderOverrideReset(overrideControls, 'textCase', __('Case', 'typography-stylist'))}
 		</PanelBody>
 	);
 }

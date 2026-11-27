@@ -12,6 +12,7 @@
 import { PanelBody, RangeControl } from '@wordpress/components';
 import { __, isRTL, sprintf } from '@wordpress/i18n';
 import { INITIAL_HANG_MAX, hasBlockTextIndent, initialHangApplies, normalizeHang, resolveHangTextAlign, setFitLineHang } from '../../utils';
+import renderOverrideReset from './override-reset';
 
 /**
  * The hang of the first letter, per line in fit-to-width mode (#242).
@@ -22,7 +23,7 @@ import { INITIAL_HANG_MAX, hasBlockTextIndent, initialHangApplies, normalizeHang
 export default function renderFirstLetterHangPanel(props) {
 	const {
 		activeParagraphStyle, attributes, fitLineHangs, fontSize, hangLinePreviews, initialHang,
-		setAttributes, textAlign
+		overrideControls, setAttributes, textAlign
 	} = props;
 
 	return (
@@ -48,6 +49,8 @@ export default function renderFirstLetterHangPanel(props) {
 				allowReset
 				resetFallbackValue={0}
 			/>
+			{/* The block value only: the per-line hangs of a fit block are content (#451) */}
+			{renderOverrideReset(overrideControls, 'initialHang', __('First Letter Hang', 'typography-stylist'))}
 			{fontSize === 'fit' && hangLinePreviews.map((preview, i) => {
 				// Line 1 is the control above; empty lines have no letter to hang
 				if (i === 0 || !preview) {

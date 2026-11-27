@@ -12,13 +12,15 @@ import { resolveBlockFontFamilyStyle, buildResponsiveClamp, formatFontSizeLength
 /**
  * The inline style object for the block's RichText in the editor.
  *
- * Under an active paragraph style only the attributes that differ from the
- * style (styleOverrides) are written inline; the class renders the rest.
+ * Under an active paragraph style only the settings the author changed on
+ * top of the style (styleOverrides, from the block's overrideKeys, #451) are
+ * written inline, as save.js writes them; the class renders the rest.
  *
  * @param {Object}  block                 Block attributes the style reads
  * @param {string}  block.sizePreviewUnit The unit sizes preview in ('px' or 'rem')
- * @param {?Object} block.styleOverrides  Attributes that differ from the active
- *                                        paragraph style, or null without one
+ * @param {?Object} block.styleOverrides  The block's override keys as a map
+ *                                        (overrideKeysToMap()), or null without
+ *                                        an active paragraph style
  * @return {Object} React style object.
  */
 export default function buildEditorStyle({
@@ -46,6 +48,9 @@ export default function buildEditorStyle({
 
 	if (features.length > 0 && rendersInline('features')) {
 		styles.fontFeatureSettings = features.map(f => `"${f}" 1`).join(', ');
+	} else if (styleOverrides && styleOverrides.features) {
+		// No features on top of a style that has some (#451, save.js parity)
+		styles.fontFeatureSettings = 'normal';
 	}
 
 	// Use CSS variable if fontId is set (for font replacements), otherwise
@@ -62,16 +67,23 @@ export default function buildEditorStyle({
 		styles.fontWeight = fontWeight;
 	}
 
+	// On top of a style these "none" values are `normal` (#451 round 1, save.js parity)
 	if (fontStyle && rendersInline('fontStyle')) {
 		styles.fontStyle = fontStyle;
+	} else if (styleOverrides && styleOverrides.fontStyle) {
+		styles.fontStyle = 'normal';
 	}
 
 	if (letterSpacing !== 0 && rendersInline('letterSpacing')) {
 		styles.letterSpacing = `${letterSpacing / 1000}em`;
+	} else if (styleOverrides && styleOverrides.letterSpacing) {
+		styles.letterSpacing = 'normal';
 	}
 
 	if (lineHeight !== 0 && rendersInline('lineHeight')) {
 		styles.lineHeight = lineHeight;
+	} else if (styleOverrides && styleOverrides.lineHeight) {
+		styles.lineHeight = 'normal';
 	}
 
 	if (fontSize === 'responsive' && rendersInline('fontSize')) {
@@ -92,8 +104,13 @@ export default function buildEditorStyle({
 	// the lines read (style.css), so each line resolves the em value at its
 	// own size and not at the heading's (#458). Same test as the
 	// letter-spacing above; under a paragraph style the class supplies it.
+	// An override to none on top of a style writes `normal` to the
+	// property too, or the lines would take the style's value from the
+	// class rule while the heading shows none.
 	if (fontSize === 'fit' && letterSpacing !== 0 && rendersInline('letterSpacing')) {
 		styles['--typost-fit-letter-spacing'] = `${letterSpacing / 1000}em`;
+	} else if (fontSize === 'fit' && styleOverrides && styleOverrides.letterSpacing) {
+		styles['--typost-fit-letter-spacing'] = 'normal';
 	}
 
 	// A fixed px size (a style created from the inline editor) has no
@@ -108,6 +125,8 @@ export default function buildEditorStyle({
 
 	if (fontVariationSettings && rendersInline('fontVariationSettings')) {
 		styles.fontVariationSettings = fontVariationSettings;
+	} else if (styleOverrides && styleOverrides.fontVariationSettings) {
+		styles.fontVariationSettings = 'normal';
 	}
 
 	if (textAlign) {

@@ -3,7 +3,7 @@
  */
 
 import { RichText } from '@wordpress/block-editor';
-import { buildFitLinesHtml, normalizeHang, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit, caseDeclarations } from './utils';
+import { buildFitLinesHtml, normalizeHang, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit, caseDeclarations, normalizeTextCase, overrideKeysToMap } from './utils';
 
 // Validate and sanitize font-variation-settings value.
 // Ensures each entry matches the "axis" number format (e.g. "wght" 700, "wdth" 100).
@@ -50,6 +50,7 @@ export default function save({ attributes }) {
 		screenReaderClass,
 		textAlign,
 		styleClass,
+		overrideKeys,
 		fontVariationSettings,
 		layeredConfigId,
 		animationConfigId
@@ -60,55 +61,74 @@ export default function save({ attributes }) {
 	// 'px' from the deprecations' migrate(), so they keep writing px.
 	const unit = resolveFontSizeUnit(fontSizeUnit);
 
-	// Build inline style — skipped when styleClass is set (CSS class provides styling)
+	// Under a styleClass the style's CSS class renders the typography, and
+	// only the settings the author changed on top of the style (#451, the
+	// overrideKeys attribute) are written inline. An empty list writes only
+	// textAlign (layout, not typography), the same bytes as before #451.
+	// Without a styleClass every setting is written.
+	const overridden = styleClass ? overrideKeysToMap(overrideKeys) : null;
+	const writes = (key) => !overridden || !!overridden[key];
+
+	// Build inline style
 	const buildStyle = () => {
 		const styleArray = [];
 
-		// When a styleClass is active, only output textAlign (layout, not typography)
-		if (styleClass) {
-			if (textAlign) {
-				styleArray.push(`text-align: ${textAlign}`);
-			}
-			return styleArray.join('; ');
-		}
-
-		if (features.length > 0) {
+		if (features.length > 0 && writes('features')) {
 			styleArray.push(`font-feature-settings: ${features.map(f => `"${f}" 1`).join(', ')}`);
+		} else if (overridden && overridden.features) {
+			// No features on top of a style that has some (#451)
+			styleArray.push('font-feature-settings: normal');
 		}
 
 		// Use CSS variable if fontId is present, otherwise fall back to fontFamily
-		if (fontId) {
-			styleArray.push(`font-family: var(--font-${fontId})`);
-		} else if (fontFamily) {
-			styleArray.push(`font-family: ${fontFamily}`);
+		if (writes('fontId')) {
+			if (fontId) {
+				styleArray.push(`font-family: var(--font-${fontId})`);
+			} else if (fontFamily) {
+				styleArray.push(`font-family: ${fontFamily}`);
+			}
 		}
 
-		if (fontWeight) {
+		if (fontWeight && writes('fontWeight')) {
 			styleArray.push(`font-weight: ${fontWeight}`);
 		}
 
 		// Visual italic only (font-style) — semantic emphasis stays <em>, added
 		// via the editor's own Italic button. Empty default keeps existing
 		// blocks' save output byte-identical (block validation).
-		if (fontStyle) {
+		// On top of a style, Inherit, no letter spacing, no line height and
+		// no axes are written as `normal` (#451 round 1), so they win over
+		// the class as the editor previews them
+		if (fontStyle && writes('fontStyle')) {
 			styleArray.push(`font-style: ${fontStyle}`);
+		} else if (overridden && overridden.fontStyle) {
+			styleArray.push('font-style: normal');
 		}
 
-		if (letterSpacing !== 0) {
+		if (letterSpacing !== 0 && writes('letterSpacing')) {
 			styleArray.push(`letter-spacing: ${letterSpacing / 1000}em`);
+		} else if (overridden && overridden.letterSpacing) {
+			styleArray.push('letter-spacing: normal');
 		}
 
-		if (lineHeight !== 0) {
+		if (lineHeight !== 0 && writes('lineHeight')) {
 			styleArray.push(`line-height: ${lineHeight}`);
+		} else if (overridden && overridden.lineHeight) {
+			styleArray.push('line-height: normal');
 		}
 
 		// Case (#214). Default ('') writes nothing, so blocks saved before
-		// the attribute existed serialize unchanged (block validation).
-		caseDeclarations(textCase, fakeSmallCaps).forEach(([property, value]) => {
-			styleArray.push(`${property}: ${value}`);
-		});
+		// the attribute existed serialize unchanged (block validation). On
+		// top of a style, Default is written as Normal, as the editor
+		// previews it: an inline style cannot fall back to the theme past
+		// the class rule.
+		if (writes('textCase')) {
+			caseDeclarations(overridden ? (normalizeTextCase(textCase) || 'none') : textCase, fakeSmallCaps).forEach(([property, value]) => {
+				styleArray.push(`${property}: ${value}`);
+			});
+		}
 
-		if (fontSize === 'responsive') {
+		if (fontSize === 'responsive' && writes('fontSize')) {
 			styleArray.push(`font-size: ${buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, unit)}`);
 		}
 
@@ -116,7 +136,7 @@ export default function save({ attributes }) {
 		// (cqi units); the block-level clamp is the fallback for browsers
 		// without container-query support, which drop the calc(...cqi)
 		// declaration and let lines inherit this size.
-		if (fontSize === 'fit') {
+		if (fontSize === 'fit' && writes('fontSize')) {
 			styleArray.push(`font-size: ${buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, unit)}`);
 		}
 
@@ -127,15 +147,17 @@ export default function save({ attributes }) {
 		// generators. Blocks saved before this branch existed carry no
 		// font-size and validate through the v1 deprecation and are upgraded
 		// the next time the post is saved after a block edit.
-		if (/^\d+(\.\d+)?$/.test(String(fontSize)) && Number(fontSize) > 0) {
+		if (writes('fontSize') && /^\d+(\.\d+)?$/.test(String(fontSize)) && Number(fontSize) > 0) {
 			styleArray.push(`font-size: ${formatFontSizeLength(fontSize, unit)}`);
 		}
 
-		if (fontVariationSettings) {
+		if (fontVariationSettings && writes('fontVariationSettings')) {
 			const safeFVS = sanitizeFontVariationSettings(fontVariationSettings);
 			if (safeFVS) {
 				styleArray.push(`font-variation-settings: ${safeFVS}`);
 			}
+		} else if (overridden && overridden.fontVariationSettings) {
+			styleArray.push('font-variation-settings: normal');
 		}
 
 		if (textAlign) {
@@ -176,10 +198,13 @@ export default function save({ attributes }) {
 	// rule in style.css, because an inline style cannot reach a
 	// pseudo-element. Set on the object directly: the camelCase parse above
 	// would mangle a leading '--'. Under a styleClass the style's CSS class
-	// supplies the value, like every other typography property. Absent at
-	// 0, so blocks saved before this attribute existed serialize unchanged.
+	// supplies the value, like every other typography property, unless the
+	// author changed the hang on top of the style (#451): that value is
+	// written even at 0, so no hang on one block cancels the style's hang,
+	// as the editor previews it. Absent at 0 otherwise, so blocks saved
+	// before this attribute existed serialize unchanged.
 	const hang = normalizeHang(initialHang);
-	if (!styleClass && hang > 0) {
+	if (overridden ? overridden.initialHang : hang > 0) {
 		styleObj['--typost-hang'] = String(hang);
 	}
 

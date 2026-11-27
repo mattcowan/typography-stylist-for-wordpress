@@ -11,6 +11,7 @@
 
 import { PanelBody, ToggleControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import renderOverrideReset from './override-reset';
 
 /**
  * Block-level OpenType feature toggles, grouped by category.
@@ -20,7 +21,7 @@ import { __ } from '@wordpress/i18n';
  */
 export default function renderFeaturesPanel(props) {
 	const {
-		features, getCategoryTitle, groupedFeatures, toggleBlockFeature
+		features, getCategoryTitle, groupedFeatures, overrideControls, toggleBlockFeature
 	} = props;
 
 	return (
@@ -31,6 +32,8 @@ export default function renderFeaturesPanel(props) {
 			<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
 				{__('These controls apply features to the entire block. To apply features to selected text, select it and click “Typography Stylist Features” in the block toolbar.', 'typography-stylist')}
 			</p>
+			{/* Above the long feature list, so it is in view (#451) */}
+			{renderOverrideReset(overrideControls, 'features', __('OpenType Features', 'typography-stylist'))}
 			{Object.entries(groupedFeatures).map(([category, categoryFeatures]) => (
 				<div key={category} className="typost-feature-category">
 					<h4>{getCategoryTitle(category)}</h4>

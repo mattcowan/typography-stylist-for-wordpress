@@ -12,7 +12,7 @@ Every attribute the block can store (block.json, plus the attributes its `suppor
 
 | List | Attributes | What happens |
 |---|---|---|
-| `THEME_LOOK_PLUGIN_ATTRIBUTES` | `features`, `fontFamily`, `fontId`, `fontWeight`, `fontStyle`, `fontSize`, `fontSizeMin/Preferred/Max`, `fitLineSizes`, `fitMaxSize`, `fitWordSizes`, `fitLineHangs`, `initialHang`, `letterSpacing`, `lineHeight`, `textCase`, `fakeSmallCaps`, `fontVariationSettings`, `styleClass` | set to the block.json default, except `fontWeight: ''`; `fontSize: 'inherit'` with 16/32/64 writes no size |
+| `THEME_LOOK_PLUGIN_ATTRIBUTES` | `features`, `fontFamily`, `fontId`, `fontWeight`, `fontStyle`, `fontSize`, `fontSizeMin/Preferred/Max`, `fitLineSizes`, `fitMaxSize`, `fitWordSizes`, `fitLineHangs`, `initialHang`, `letterSpacing`, `lineHeight`, `textCase`, `fakeSmallCaps`, `fontVariationSettings`, `overrideKeys` (#451), `styleClass` | set to the block.json default, except `fontWeight: ''`; `fontSize: 'inherit'` with 16/32/64 writes no size |
 | `THEME_LOOK_WORDPRESS_ATTRIBUTES` | `style` (color, spacing, line height, Line indent), `textColor`, `backgroundColor`, `className`, `textAlign` | set to `undefined`, which removes them (`setAttributes`, `createBlock` and the serializer skip `undefined`) |
 | `THEME_LOOK_KEPT_ATTRIBUTES` | `content` (stripped separately), `tagName`, `align` (wide/full), `anchor`, `fontSizeUnit`, `screenReaderClass`, `lock`, `metadata` | kept: not styling (the width is layout, the screen reader class is an accessibility setting, `metadata` holds the block name, notes and visibility) |
 | `THEME_LOOK_UNDECIDED_ATTRIBUTES` | `layeredConfigId`, `animationConfigId` | left as they are: extension plugins store them and give them meaning |
