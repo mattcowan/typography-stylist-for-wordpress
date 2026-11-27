@@ -442,7 +442,7 @@ describe('Typography Stylist - Save Component (Frontend Rendering)', () => {
 		});
 	});
 
-	describe('Windows Narrator Focus Enhancement', () => {
+	describe('screen reader copy structure', () => {
 		it('should maintain existing screen reader class structure', () => {
 			const attributes = {
 				content: 'Focus Test',
