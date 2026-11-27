@@ -196,41 +196,48 @@ function watchSuggestionsList(root) {
 }
 
 /**
- * Whether the picker's suggestions list is open and shows no row.
+ * Whether the picker's suggestions list is open and highlights no row.
  *
- * Core renders the list (an empty `ul[role="listbox"]`) while the field is
+ * Core renders the list (a `ul[role="listbox"]`) while the field is
  * expanded, also when the typed text matches nothing, and removes it when
- * the field closes.
+ * the field closes. It marks the highlighted row with
+ * `aria-selected="true"` (form-token-field/suggestions-list, 5.8 and
+ * later). An open list with no such row is either empty or hides the
+ * option that core would pick on Enter.
  *
  * @param {Element|null} root Wrapper element around the control.
- * @return {boolean} True only for an open list with no option in it.
+ * @return {boolean} True only for an open list with no highlighted option.
  */
-function isSuggestionsListEmpty(root) {
+function hasNoHighlightedRow(root) {
 	if (!root || !root.querySelector) {
 		return false;
 	}
 	var list = root.querySelector(SUGGESTIONS_LIST_SELECTOR);
-	return !!list && !list.querySelector('[role="option"]');
+	return !!list && !list.querySelector('[role="option"][aria-selected="true"]');
 }
 
 /**
- * Stop Enter from picking a row the list no longer shows. Returns a
- * function that stops the guard.
+ * Stop Enter from picking a row the list does not show. Returns a function
+ * that stops the guard.
  *
- * When the typed text matches nothing, core's ComboboxControl keeps the row
- * it highlighted for the earlier text, and Enter picks that row: type "Bo",
- * then "zzzz", press Enter, and Bookmania applies with no row in sight
- * (checked in WordPress 7.1.5, `selectedSuggestion` in
- * packages/components/src/combobox-control). While the open list is empty,
- * this capture listener on the wrapper prevents Enter and stops its
- * propagation. Core's key handler returns early for a prevented event from
- * WordPress 6.4 (wp/6.4 combobox-control/index.tsx), but in 5.8 it does not
- * check `defaultPrevented` (wp/5.8 combobox-control/index.js, `onKeyDown`).
- * Stopping propagation in the capture phase keeps the event from reaching
- * the React root listener that runs core's handler, so the guard works on
- * every supported version. Nothing applies, and core does not say "Item
- * selected.". Enter with a row in the list, and Enter on a closed field,
- * work as before.
+ * Core's ComboboxControl picks its `selectedSuggestion` on Enter, also when
+ * the list no longer shows that row:
+ * - When the typed text matches nothing, every version keeps the row it
+ *   highlighted for the earlier text: type "Bo", then "zzzz", press Enter,
+ *   and Bookmania applies with no row in sight (checked in WordPress 7.1.5).
+ * - In 5.8 a new search never resets the selection, also when other rows
+ *   match: highlight "Body", type "Pull", and Enter applies "Body" while
+ *   only "Pull quote" shows. From 6.4 an effect highlights the first match
+ *   instead (wp/6.4 combobox-control/index.tsx).
+ * While the open list highlights no row, this capture listener on the
+ * wrapper prevents Enter and stops its propagation. Core's key handler
+ * returns early for a prevented event from WordPress 6.4, but in 5.8 it
+ * does not check `defaultPrevented` (wp/5.8 combobox-control/index.js,
+ * `onKeyDown`). Stopping propagation in the capture phase keeps the event
+ * from reaching the React root listener that runs core's handler, so the
+ * guard works on every supported version. Nothing applies, and core does
+ * not say "Item selected.". Enter on a highlighted row, and Enter on a
+ * closed field, work as before.
  *
  * @param {Element|null} root Wrapper element around the control.
  * @return {Function} Cleanup.
@@ -246,7 +253,7 @@ function guardEnterWithoutMatches(root) {
 		if (!event.target || event.target.tagName !== 'INPUT') {
 			return;
 		}
-		if (isSuggestionsListEmpty(root)) {
+		if (hasNoHighlightedRow(root)) {
 			event.preventDefault();
 			event.stopPropagation();
 		}
@@ -301,6 +308,6 @@ module.exports = {
 	normalizeFontPickerValue: normalizeFontPickerValue,
 	removeSuggestionsListFromTabOrder: removeSuggestionsListFromTabOrder,
 	watchSuggestionsList: watchSuggestionsList,
-	isSuggestionsListEmpty: isSuggestionsListEmpty,
+	hasNoHighlightedRow: hasNoHighlightedRow,
 	guardEnterWithoutMatches: guardEnterWithoutMatches
 };

@@ -319,9 +319,11 @@ test.describe('#303 Paragraph Style panel in Quick Feature Toggles with a text s
 		// The field is still there: no style applied, so no badge replaced it
 		await expect(field).toBeVisible();
 
-		// With a match in the list, Enter still applies the style
+		// With a highlighted match in the list, Enter still applies the style.
+		// The guard blocks Enter until core highlights the row, so wait for it.
 		await field.fill(name);
 		await expect(rows).toHaveCount(1);
+		await expect(page.locator('.typost-ps-style-picker [role="option"][aria-selected="true"]')).toHaveCount(1);
 		await field.press('Enter');
 		await expect.poll(() => styledText(page, clientId, style.id)).toBe('J');
 	});

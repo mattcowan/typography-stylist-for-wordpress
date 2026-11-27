@@ -3490,28 +3490,29 @@
 	}
 
 	/**
-	 * Whether the picker's suggestions list is open and shows no row. Core
-	 * renders an empty list while the field is expanded and the typed text
-	 * matches nothing. ES5 twin of isSuggestionsListEmpty() in
-	 * assets/js/font-picker.js.
+	 * Whether the picker's suggestions list is open and highlights no row.
+	 * Core marks the highlighted row with `aria-selected="true"`; an open
+	 * list without one is empty or hides the style that Enter would apply.
+	 * ES5 twin of hasNoHighlightedRow() in assets/js/font-picker.js.
 	 *
 	 * @param {Element|null} root Wrapper element around the control
-	 * @return {boolean} True only for an open list with no option in it
+	 * @return {boolean} True only for an open list with no highlighted option
 	 */
-	function isSuggestionsListEmpty(root) {
+	function hasNoHighlightedRow(root) {
 		if (!root || !root.querySelector) {
 			return false;
 		}
 		var list = root.querySelector(SUGGESTIONS_LIST_SELECTOR);
-		return !!list && !list.querySelector('[role="option"]');
+		return !!list && !list.querySelector('[role="option"][aria-selected="true"]');
 	}
 
 	/**
-	 * Stop Enter from picking a style the list no longer shows. When the
-	 * typed text matches nothing, core's ComboboxControl keeps the row it
-	 * highlighted for the earlier text, and Enter applies that style. While
-	 * the open list is empty, this capture listener prevents Enter and stops
-	 * its propagation: core's key handler skips a prevented event from
+	 * Stop Enter from picking a style the list does not show. Core's
+	 * ComboboxControl applies its old highlighted row when the typed text
+	 * matches nothing, and in 5.8 also when a new search shows other rows
+	 * (5.8 never resets the selection on a new search). While the open list
+	 * highlights no row, this capture listener prevents Enter and stops its
+	 * propagation: core's key handler skips a prevented event from
 	 * WordPress 6.4, but in 5.8 it does not check `defaultPrevented`, so only
 	 * the stopped propagation keeps the event from core there. ES5 twin of
 	 * guardEnterWithoutMatches() in assets/js/font-picker.js, which has the
@@ -3531,7 +3532,7 @@
 			if (!event.target || event.target.tagName !== 'INPUT') {
 				return;
 			}
-			if (isSuggestionsListEmpty(root)) {
+			if (hasNoHighlightedRow(root)) {
 				event.preventDefault();
 				event.stopPropagation();
 			}
@@ -4546,7 +4547,7 @@
 		buildStyleSelectProps: buildStyleSelectProps,
 		removeSuggestionsListFromTabOrder: removeSuggestionsListFromTabOrder,
 		watchSuggestionsList: watchSuggestionsList,
-		isSuggestionsListEmpty: isSuggestionsListEmpty,
+		hasNoHighlightedRow: hasNoHighlightedRow,
 		guardEnterWithoutMatches: guardEnterWithoutMatches,
 		buildBrowserSampleText: buildBrowserSampleText,
 		groupParagraphStyles: groupParagraphStyles,

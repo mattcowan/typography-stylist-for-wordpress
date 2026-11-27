@@ -15,7 +15,7 @@ const {
 	buildStyleSelectProps,
 	removeSuggestionsListFromTabOrder,
 	watchSuggestionsList,
-	isSuggestionsListEmpty,
+	hasNoHighlightedRow,
 	guardEnterWithoutMatches,
 } = require('../assets/js/lib/ps-utils.js');
 const fontPicker = require('../../assets/js/font-picker.js');
@@ -212,9 +212,14 @@ describe('suggestions list and the Tab order (SR-5)', () => {
 	});
 });
 
-describe('Enter with no matching style (core keeps the old highlight)', () => {
+describe('Enter with no highlighted style (core keeps the old highlight)', () => {
 	// The picker's markup while the field is open: the input, then core's
-	// list. No list means the field is closed.
+	// list. No list means the field is closed. Core marks the row it
+	// highlights with aria-selected="true".
+	const HIGHLIGHTED = '<ul role="listbox"><li role="option" aria-selected="true">Body</li></ul>';
+	// WordPress 5.8 after "Body" was highlighted and the search changed to
+	// "Pull": core still holds "Body", which the list no longer shows.
+	const STALE = '<ul role="listbox"><li role="option" aria-selected="false">Pull quote</li></ul>';
 	const picker = (listHtml) => {
 		const root = document.createElement('div');
 		root.innerHTML = '<input type="text" />' + (listHtml || '');
@@ -230,11 +235,25 @@ describe('Enter with no matching style (core keeps the old highlight)', () => {
 		document.body.innerHTML = '';
 	});
 
-	test('an open list with no row is empty; a list with rows or no list is not', () => {
-		expect(isSuggestionsListEmpty(picker('<ul role="listbox"></ul>'))).toBe(true);
-		expect(isSuggestionsListEmpty(picker('<ul role="listbox"><li role="option">Body</li></ul>'))).toBe(false);
-		expect(isSuggestionsListEmpty(picker(''))).toBe(false);
-		expect(isSuggestionsListEmpty(null)).toBe(false);
+	test('an open list that is empty or shows only rows that are not highlighted has no highlighted row', () => {
+		expect(hasNoHighlightedRow(picker('<ul role="listbox"></ul>'))).toBe(true);
+		expect(hasNoHighlightedRow(picker(STALE))).toBe(true);
+		// control: a highlighted row, a closed field, no root
+		expect(hasNoHighlightedRow(picker(HIGHLIGHTED))).toBe(false);
+		expect(hasNoHighlightedRow(picker(''))).toBe(false);
+		expect(hasNoHighlightedRow(null)).toBe(false);
+	});
+
+	test('on 5.8, Enter after a new search that hides the highlighted style is blocked, so core does not apply the hidden style', () => {
+		const root = picker(STALE);
+		guardEnterWithoutMatches(root);
+		const input = root.querySelector('input');
+		let calls = 0;
+		input.addEventListener('keydown', () => {
+			calls++;
+		});
+		expect(pressEnter(input)).toBe(true);
+		expect(calls).toBe(0);
 	});
 
 	test('Enter in the field is prevented while the open list is empty, so core picks nothing', () => {
@@ -258,13 +277,13 @@ describe('Enter with no matching style (core keeps the old highlight)', () => {
 			return calls;
 		};
 		expect(seen('<ul role="listbox"></ul>')).toBe(0);
-		// control: the same handler sees Enter when the list has a row, and when it is closed
-		expect(seen('<ul role="listbox"><li role="option">Body</li></ul>')).toBe(1);
+		// control: the same handler sees Enter on a highlighted row, and when the field is closed
+		expect(seen(HIGHLIGHTED)).toBe(1);
 		expect(seen('')).toBe(1);
 	});
 
-	test('Enter still reaches core when the list shows a row, or the field is closed', () => {
-		const withRow = picker('<ul role="listbox"><li role="option">Body</li></ul>');
+	test('Enter still reaches core on a highlighted row, or when the field is closed', () => {
+		const withRow = picker(HIGHLIGHTED);
 		guardEnterWithoutMatches(withRow);
 		expect(pressEnter(withRow.querySelector('input'))).toBe(false);
 
@@ -373,7 +392,12 @@ describe('twin: the font picker\'s Tab-order helpers (assets/js/font-picker.js)'
 	});
 
 	test('both copies guard Enter alike', () => {
-		const lists = ['<ul role="listbox"></ul>', '<ul role="listbox"><li role="option">A</li></ul>', ''];
+		const lists = [
+			'<ul role="listbox"></ul>',
+			'<ul role="listbox"><li role="option" aria-selected="true">A</li></ul>',
+			'',
+			'<ul role="listbox"><li role="option" aria-selected="false">B</li></ul>',
+		];
 		const run3 = (guard) =>
 			lists.map((listHtml) => {
 				const root = document.createElement('div');
@@ -391,12 +415,12 @@ describe('twin: the font picker\'s Tab-order helpers (assets/js/font-picker.js)'
 				root.remove();
 				return [event.defaultPrevented, reached];
 			});
-		expect(run3(guardEnterWithoutMatches)).toEqual([[true, false], [false, true], [false, true]]);
+		expect(run3(guardEnterWithoutMatches)).toEqual([[true, false], [false, true], [false, true], [true, false]]);
 		expect(run3(fontPicker.guardEnterWithoutMatches)).toEqual(run3(guardEnterWithoutMatches));
 		lists.forEach((listHtml) => {
 			const root = document.createElement('div');
 			root.innerHTML = listHtml;
-			expect(isSuggestionsListEmpty(root)).toBe(fontPicker.isSuggestionsListEmpty(root));
+			expect(hasNoHighlightedRow(root)).toBe(fontPicker.hasNoHighlightedRow(root));
 		});
 	});
 
