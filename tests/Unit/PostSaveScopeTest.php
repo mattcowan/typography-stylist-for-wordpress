@@ -125,6 +125,12 @@ class PostSaveScopeTest extends TestCase {
                 $this->log[] = $sql;
                 return 0;
             }
+            // The search for the posts that use a saved synced pattern
+            // (#487, SyncedPatternUserCachesTest): no post uses it here
+            public $posts = 'wp_posts';
+            public function get_results($sql) {
+                return [];
+            }
         };
     }
 
