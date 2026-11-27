@@ -53,12 +53,143 @@
 		}, 100);
 	}
 
+	// -------------------------------------------------------------------------
+	// React roots (#456). The same helpers are in each bundled module's
+	// scripts; docs/twins.md lists the copies.
+	// -------------------------------------------------------------------------
+
+	// The createRoot() root of each container this script renders into
+	var elementRoots = new WeakMap();
+
+	/**
+	 * Render an element into a container. With createRoot() where WordPress
+	 * has it (React 18, WordPress 6.2 and later): one root for each
+	 * container, which each later call renders into again. Else with
+	 * render() (React 17). React 19 has no render().
+	 *
+	 * @param {Object}  element   React element
+	 * @param {Element} container Container element
+	 */
+	function renderIntoRoot(element, container) {
+		var wpElement = wp.element;
+		if (typeof wpElement.createRoot === 'function') {
+			var root = elementRoots.get(container);
+			if (!root) {
+				root = wpElement.createRoot(container);
+				elementRoots.set(container, root);
+			}
+			root.render(element);
+			return;
+		}
+		if (typeof wpElement.render === 'function') {
+			wpElement.render(element, container);
+		}
+	}
+
+	/**
+	 * Unmount what renderIntoRoot() rendered into a container, with the call
+	 * that matches its root: root.unmount() or unmountComponentAtNode().
+	 *
+	 * @param {Element} container Container element
+	 * @return {boolean} True when a root was unmounted
+	 */
+	function unmountRoot(container) {
+		var root = elementRoots.get(container);
+		if (root) {
+			elementRoots['delete'](container);
+			root.unmount();
+			return true;
+		}
+		if (typeof wp.element.unmountComponentAtNode === 'function') {
+			return wp.element.unmountComponentAtNode(container) === true;
+		}
+		return false;
+	}
+
+	// The containers this script rendered a root into, while they are on the
+	// page, the observer that notices when they leave, and the documents it
+	// watches (an iframe's document too)
+	var watchedContainers = [];
+	var containerObserver = null;
+	var observedDocuments = [];
+
+	/**
+	 * Unmount the root of each watched container that left the page, and
+	 * stop observing when none is left. An error in one unmount does not
+	 * stop the others; the first is thrown again afterward, so it still
+	 * shows in the console.
+	 */
+	function releaseDetachedRoots() {
+		var firstError = null;
+		watchedContainers = watchedContainers.filter(function(container) {
+			if (container.isConnected) {
+				return true;
+			}
+			try {
+				unmountRoot(container);
+			} catch (error) {
+				if (!firstError) {
+					firstError = error;
+				}
+			}
+			return false;
+		});
+		if (watchedContainers.length === 0 && containerObserver) {
+			containerObserver.disconnect();
+			containerObserver = null;
+			observedDocuments = [];
+		}
+		if (firstError) {
+			setTimeout(function() {
+				throw firstError;
+			}, 0);
+		}
+	}
+
+	/**
+	 * Unmount a container's root when the container leaves the page (its
+	 * dialog closes, or the block sidebar shows another block). Core
+	 * unmounts only a root that render() made in a hook container itself
+	 * (#419): not a createRoot() root, and not a root in an element that a
+	 * script appends to the container.
+	 *
+	 * A container that is not on the page when its hook fires is a render
+	 * the editor never shows: when the block sidebar shows another block, it
+	 * mounts the last block's controls once more in a panel that is not in
+	 * the document. Its root is unmounted as soon as that commit is over.
+	 *
+	 * Call it from the hook's action, after renderIntoRoot().
+	 *
+	 * @param {Element} container Element a root was rendered into
+	 */
+	function watchRootContainer(container) {
+		// Only a root that a call can unmount is watched
+		if (typeof window.MutationObserver !== 'function' ||
+			watchedContainers.indexOf(container) !== -1 ||
+			!(elementRoots.has(container) || typeof wp.element.unmountComponentAtNode === 'function')) {
+			return;
+		}
+		watchedContainers.push(container);
+		if (!container.isConnected) {
+			Promise.resolve().then(releaseDetachedRoots);
+			return;
+		}
+		if (!containerObserver) {
+			containerObserver = new window.MutationObserver(releaseDetachedRoots);
+		}
+		var doc = container.ownerDocument;
+		if (observedDocuments.indexOf(doc) === -1) {
+			observedDocuments.push(doc);
+			containerObserver.observe(doc.body, { childList: true, subtree: true });
+		}
+	}
+
 	/**
 	 * Close and unmount the glyphs modal.
 	 */
 	function closeModal() {
 		if (modalRoot) {
-			wp.element.unmountComponentAtNode(modalRoot);
+			unmountRoot(modalRoot);
 			if (modalRoot.parentNode) {
 				modalRoot.parentNode.removeChild(modalRoot);
 			}
@@ -134,7 +265,7 @@
 		modalRoot.className = 'typost-glyphs-modal-root';
 		document.body.appendChild(modalRoot);
 
-		wp.element.render(
+		renderIntoRoot(
 			el(GlyphsModal, {
 				source: source,
 				context: context,
@@ -159,75 +290,13 @@
 		);
 	}
 
-	// The elements a "Glyphs…" button is rendered into, while they are on
-	// the page, and the observer that notices when they leave (#419)
-	var buttonMounts = [];
-	var buttonMountObserver = null;
-	// The documents the observer watches (an iframe's document too)
-	var observedDocuments = [];
-
-	/**
-	 * Unmount each button whose element left the page, and stop observing
-	 * when none is left. An error in one unmount does not stop the others;
-	 * the first is thrown again afterward, so it still shows in the console.
-	 */
-	function releaseDetachedButtons() {
-		var firstError = null;
-		buttonMounts = buttonMounts.filter(function(mount) {
-			if (mount.isConnected) {
-				return true;
-			}
-			try {
-				wp.element.unmountComponentAtNode(mount);
-			} catch (error) {
-				if (!firstError) {
-					firstError = error;
-				}
-			}
-			return false;
-		});
-		if (buttonMounts.length === 0 && buttonMountObserver) {
-			buttonMountObserver.disconnect();
-			buttonMountObserver = null;
-			observedDocuments = [];
-		}
-		if (firstError) {
-			setTimeout(function() {
-				throw firstError;
-			}, 0);
-		}
-	}
-
-	/**
-	 * Unmount a button when its hook container leaves the page (the dialog
-	 * closes). Core unmounts only a root rendered into the container itself,
-	 * and the button has its own element in the container, so that other
-	 * extensions can render into the same container (#419).
-	 *
-	 * @param {Element} mount Element the button is rendered into
-	 */
-	function watchButtonMount(mount) {
-		// Only an element on the page can be seen leaving it
-		if (typeof wp.element.unmountComponentAtNode !== 'function' ||
-			typeof window.MutationObserver !== 'function' ||
-			!mount.isConnected) {
-			return;
-		}
-		buttonMounts.push(mount);
-		if (!buttonMountObserver) {
-			buttonMountObserver = new window.MutationObserver(releaseDetachedButtons);
-		}
-		// A container in another document (an iframe) is observed there too;
-		// each document once
-		var doc = mount.ownerDocument;
-		if (observedDocuments.indexOf(doc) === -1) {
-			observedDocuments.push(doc);
-			buttonMountObserver.observe(doc.body, { childList: true, subtree: true });
-		}
-	}
-
 	/**
 	 * Render the "Glyphs…" button into a hook container.
+	 *
+	 * The button has its own element in the container, so that other
+	 * extensions can render into the same container. Core does not unmount
+	 * a root in that element (#419), so watchRootContainer() unmounts it
+	 * when the dialog closes.
 	 *
 	 * @param {Element} container Hook container element
 	 * @param {string} source    'inline' or 'qft'
@@ -240,9 +309,8 @@
 		var mount = document.createElement('div');
 		mount.className = 'typost-glyphs-button-wrap';
 		container.appendChild(mount);
-		watchButtonMount(mount);
 
-		wp.element.render(
+		renderIntoRoot(
 			el(Button, {
 				variant: 'secondary',
 				// The same swash G as the block-toolbar button below, not a
@@ -255,6 +323,7 @@
 			}, __('Glyphs…', 'typost-glyphs-panel')),
 			mount
 		);
+		watchRootContainer(mount);
 	}
 
 	/**

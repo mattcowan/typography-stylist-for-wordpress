@@ -37,9 +37,62 @@
 		data.glyphsPanel = data.glyphsPanel || glyphsAdmin.glyphsPanel || {};
 	}
 
+	// -------------------------------------------------------------------------
+	// React roots (#456). The same helpers are in each bundled module's
+	// scripts; docs/twins.md lists the copies.
+	// -------------------------------------------------------------------------
+
+	// The createRoot() root of each container this script renders into
+	var elementRoots = new WeakMap();
+
+	/**
+	 * Render an element into a container. With createRoot() where WordPress
+	 * has it (React 18, WordPress 6.2 and later): one root for each
+	 * container, which each later call renders into again. Else with
+	 * render() (React 17). React 19 has no render().
+	 *
+	 * @param {Object}  element   React element
+	 * @param {Element} container Container element
+	 */
+	function renderIntoRoot(element, container) {
+		var wpElement = wp.element;
+		if (typeof wpElement.createRoot === 'function') {
+			var root = elementRoots.get(container);
+			if (!root) {
+				root = wpElement.createRoot(container);
+				elementRoots.set(container, root);
+			}
+			root.render(element);
+			return;
+		}
+		if (typeof wpElement.render === 'function') {
+			wpElement.render(element, container);
+		}
+	}
+
+	/**
+	 * Unmount what renderIntoRoot() rendered into a container, with the call
+	 * that matches its root: root.unmount() or unmountComponentAtNode().
+	 *
+	 * @param {Element} container Container element
+	 * @return {boolean} True when a root was unmounted
+	 */
+	function unmountRoot(container) {
+		var root = elementRoots.get(container);
+		if (root) {
+			elementRoots['delete'](container);
+			root.unmount();
+			return true;
+		}
+		if (typeof wp.element.unmountComponentAtNode === 'function') {
+			return wp.element.unmountComponentAtNode(container) === true;
+		}
+		return false;
+	}
+
 	function closeModal() {
 		if (modalRoot) {
-			wp.element.unmountComponentAtNode(modalRoot);
+			unmountRoot(modalRoot);
 			if (modalRoot.parentNode) {
 				modalRoot.parentNode.removeChild(modalRoot);
 			}
@@ -57,7 +110,7 @@
 		modalRoot = document.createElement('div');
 		modalRoot.className = 'typost-glyphs-modal-root';
 		document.body.appendChild(modalRoot);
-		wp.element.render(
+		renderIntoRoot(
 			el(GlyphsModal, {
 				source: 'admin',
 				context: {},

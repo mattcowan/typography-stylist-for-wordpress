@@ -6,7 +6,8 @@
  * font axis sliders that replace the standard weight dropdown and add
  * controls for non-weight axes (width, slant, optical size, custom).
  *
- * Uses wp.element.render() with WordPress components (no build step).
+ * Renders with WordPress components (no build step), into a createRoot()
+ * root where WordPress has one, else with wp.element.render() (#456).
  */
 (function() {
 	'use strict';
@@ -16,6 +17,7 @@
 	var useCallback   = wp.element.useCallback;
 	var useEffect     = wp.element.useEffect;
 	var useRef        = wp.element.useRef;
+	var useLayoutEffect = wp.element.useLayoutEffect;
 	var Fragment      = wp.element.Fragment;
 	var RangeControl  = wp.components.RangeControl;
 	var Button        = wp.components.Button;
@@ -328,25 +330,34 @@
 		var filterAxes = props.filterAxes; // optional: 'wght' for weight control, 'non-wght' for others
 		var initialSettings = props.initialSettings || {};
 
-		// Join (or start) the shared session for this (surface, font)
-		var sessionKeyRef = useRef(null);
+		var forceUpdateRef = useRef(0);
+		var forceUpdate = useState(0);
+		var setForceUpdate = forceUpdate[1];
+
+		// Join (or start) the shared session for this (surface, font) in an
+		// effect, and leave it in the effect's cleanup. A join in render
+		// counted once per render: React renders twice in StrictMode and
+		// throws away a render that suspends, with no cleanup for either, so
+		// the session counted a panel that no unmount released (#456). A
+		// layout effect, so the panel shows the session's values before the
+		// browser paints.
 		var sessionRef = useRef(null);
-		if (sessionRef.current === null) {
-			sessionKeyRef.current = axisSessionKey(editorType, fontId);
-			sessionRef.current = acquireAxisSession(sessionKeyRef.current, axes, initialSettings, props.containerEl || null);
-		}
-		useEffect(function() {
-			var key = sessionKeyRef.current;
-			var session = sessionRef.current;
+		useLayoutEffect(function() {
+			var key = axisSessionKey(editorType, fontId);
 			var containerEl = props.containerEl || null;
+			var session = acquireAxisSession(key, axes, initialSettings, containerEl);
+			sessionRef.current = session;
+			forceUpdateRef.current++;
+			setForceUpdate(forceUpdateRef.current);
 			return function() {
 				releaseAxisSession(key, session, containerEl);
 			};
 		}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-		var forceUpdateRef = useRef(0);
-		var forceUpdate = useState(0);
-		var setForceUpdate = forceUpdate[1];
+		// Until the panel has joined: the values the session starts from
+		var sessionValues = sessionRef.current
+			? sessionRef.current.values
+			: window.typostVFUtils.mergeAxisSession({ values: {}, touched: {} }, axes, initialSettings).values;
 
 		// Create debounced dispatch once
 		var debouncedRef = useRef(null);
@@ -416,8 +427,8 @@
 				return el(AxisSlider, {
 					key: axis.tag,
 					axis: axis,
-					value: sessionRef.current.values[axis.tag] !== undefined
-						? sessionRef.current.values[axis.tag]
+					value: sessionValues[axis.tag] !== undefined
+						? sessionValues[axis.tag]
 						: axis['default'],
 					onChange: function(v) { handleSliderChange(axis.tag, v); },
 					onQuickButton: function(v) { handleQuickButton(axis.tag, v); }
@@ -470,6 +481,137 @@
 	}
 
 	// -------------------------------------------------------------------------
+	// React roots (#456). The same helpers are in each bundled module's
+	// scripts; docs/twins.md lists the copies.
+	// -------------------------------------------------------------------------
+
+	// The createRoot() root of each container this script renders into
+	var elementRoots = new WeakMap();
+
+	/**
+	 * Render an element into a container. With createRoot() where WordPress
+	 * has it (React 18, WordPress 6.2 and later): one root for each
+	 * container, which each later call renders into again. Else with
+	 * render() (React 17). React 19 has no render().
+	 *
+	 * @param {Object}  element   React element
+	 * @param {Element} container Container element
+	 */
+	function renderIntoRoot(element, container) {
+		var wpElement = wp.element;
+		if (typeof wpElement.createRoot === 'function') {
+			var root = elementRoots.get(container);
+			if (!root) {
+				root = wpElement.createRoot(container);
+				elementRoots.set(container, root);
+			}
+			root.render(element);
+			return;
+		}
+		if (typeof wpElement.render === 'function') {
+			wpElement.render(element, container);
+		}
+	}
+
+	/**
+	 * Unmount what renderIntoRoot() rendered into a container, with the call
+	 * that matches its root: root.unmount() or unmountComponentAtNode().
+	 *
+	 * @param {Element} container Container element
+	 * @return {boolean} True when a root was unmounted
+	 */
+	function unmountRoot(container) {
+		var root = elementRoots.get(container);
+		if (root) {
+			elementRoots['delete'](container);
+			root.unmount();
+			return true;
+		}
+		if (typeof wp.element.unmountComponentAtNode === 'function') {
+			return wp.element.unmountComponentAtNode(container) === true;
+		}
+		return false;
+	}
+
+	// The containers this script rendered a root into, while they are on the
+	// page, the observer that notices when they leave, and the documents it
+	// watches (an iframe's document too)
+	var watchedContainers = [];
+	var containerObserver = null;
+	var observedDocuments = [];
+
+	/**
+	 * Unmount the root of each watched container that left the page, and
+	 * stop observing when none is left. An error in one unmount does not
+	 * stop the others; the first is thrown again afterward, so it still
+	 * shows in the console.
+	 */
+	function releaseDetachedRoots() {
+		var firstError = null;
+		watchedContainers = watchedContainers.filter(function(container) {
+			if (container.isConnected) {
+				return true;
+			}
+			try {
+				unmountRoot(container);
+			} catch (error) {
+				if (!firstError) {
+					firstError = error;
+				}
+			}
+			return false;
+		});
+		if (watchedContainers.length === 0 && containerObserver) {
+			containerObserver.disconnect();
+			containerObserver = null;
+			observedDocuments = [];
+		}
+		if (firstError) {
+			setTimeout(function() {
+				throw firstError;
+			}, 0);
+		}
+	}
+
+	/**
+	 * Unmount a container's root when the container leaves the page (its
+	 * dialog closes, or the block sidebar shows another block). Core
+	 * unmounts only a root that render() made in a hook container itself
+	 * (#419): not a createRoot() root, and not a root in an element that a
+	 * script appends to the container.
+	 *
+	 * A container that is not on the page when its hook fires is a render
+	 * the editor never shows: when the block sidebar shows another block, it
+	 * mounts the last block's controls once more in a panel that is not in
+	 * the document. Its root is unmounted as soon as that commit is over.
+	 *
+	 * Call it from the hook's action, after renderIntoRoot().
+	 *
+	 * @param {Element} container Element a root was rendered into
+	 */
+	function watchRootContainer(container) {
+		// Only a root that a call can unmount is watched
+		if (typeof window.MutationObserver !== 'function' ||
+			watchedContainers.indexOf(container) !== -1 ||
+			!(elementRoots.has(container) || typeof wp.element.unmountComponentAtNode === 'function')) {
+			return;
+		}
+		watchedContainers.push(container);
+		if (!container.isConnected) {
+			Promise.resolve().then(releaseDetachedRoots);
+			return;
+		}
+		if (!containerObserver) {
+			containerObserver = new window.MutationObserver(releaseDetachedRoots);
+		}
+		var doc = container.ownerDocument;
+		if (observedDocuments.indexOf(doc) === -1) {
+			observedDocuments.push(doc);
+			containerObserver.observe(doc.body, { childList: true, subtree: true });
+		}
+	}
+
+	// -------------------------------------------------------------------------
 	// Render helpers
 	// -------------------------------------------------------------------------
 
@@ -513,7 +655,7 @@
 		// Get current variation settings (host-provided state, else selection walk)
 		var currentSettings = resolveInitialSettings(state);
 
-		wp.element.render(
+		renderIntoRoot(
 			el(AxesPanel, {
 				axes: axes,
 				editorType: editorType,
@@ -524,6 +666,7 @@
 			}),
 			containerEl
 		);
+		watchRootContainer(containerEl);
 	}
 
 	function renderOtherAxes(containerEl, state, editorType) {
@@ -540,7 +683,7 @@
 		// Get current variation settings (host-provided state, else selection walk)
 		var currentSettings = resolveInitialSettings(state);
 
-		wp.element.render(
+		renderIntoRoot(
 			el('div', { className: 'typost-vf-other-axes' },
 				el('div', { className: 'typost-vf-other-axes-label' },
 					__('Variable Font Axes', 'typost-variable-fonts')
@@ -556,6 +699,7 @@
 			),
 			containerEl
 		);
+		watchRootContainer(containerEl);
 	}
 
 	// -------------------------------------------------------------------------
