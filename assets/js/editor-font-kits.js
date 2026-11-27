@@ -57,7 +57,8 @@
     /**
      * Font IDs and paragraph style references named in a piece of markup.
      *
-     * Mirrors the PHP content scan: `data-font-id="N"`, `var(--font-N)`,
+     * Mirrors the PHP content scan: `data-font-id="N"`, `var(--font-N)`
+     * (the whole custom property name only, tests/fixtures/font-variable-refs.json),
      * `data-style-id="…"` and `typost-ps-…`. Serialized block attributes can
      * escape the quotes, so the quote is optional.
      *
@@ -70,7 +71,12 @@
             return out;
         }
         var match;
-        var fontPatterns = [/data-font-id=["'\\]*(\d+)/g, /--font-(\d+)/g];
+        // --font-N only as a whole custom property name, as in the PHP
+        // scans' Typost::FONT_VARIABLE_PATTERN (#485): a theme's
+        // var(--wp--custom--font-2-size) is not font 2. This file ships
+        // without a build, so the character before is matched by a group,
+        // not a lookbehind (Safari before 16.4 rejects lookbehind).
+        var fontPatterns = [/data-font-id=["'\\]*(\d+)/g, /(?:^|[^\w-])--font-(\d+)(?![\w-])/g];
         fontPatterns.forEach(function(pattern) {
             while ((match = pattern.exec(html)) !== null) {
                 var id = parseInt(match[1], 10);

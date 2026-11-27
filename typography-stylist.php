@@ -73,6 +73,21 @@ class Typost {
     );
 
     /**
+     * The font scans' pattern for the plugin's own --font-N variables.
+     *
+     * --font-N counts only as a whole custom property name: no letter,
+     * digit, underscore or hyphen right before the two hyphens or right
+     * after the number. So var(--font-36) and "--font-36:" give 36, and a
+     * theme's var(--wp--custom--font-2-size) gives nothing (#485). Group 1
+     * is the ID. The editor scan in assets/js/editor-font-kits.js
+     * (referencesFromHtml()) matches the same names, and
+     * tests/fixtures/font-variable-refs.json pins both.
+     *
+     * @var string
+     */
+    const FONT_VARIABLE_PATTERN = '/(?<![\w-])--font-(\d+)(?![\w-])/';
+
+    /**
      * Instance of this class
      */
     private static $instance = null;
@@ -695,7 +710,7 @@ class Typost {
                 }
 
                 // Method 3: Look for CSS variable references --font-{ID}
-                if (preg_match_all('/--font-(\d+)/', $content_to_check, $matches)) {
+                if (preg_match_all(self::FONT_VARIABLE_PATTERN, $content_to_check, $matches)) {
                     // Store font IDs as "id:{ID}" to differentiate from font names
                     foreach ($matches[1] as $font_id) {
                         $used_fonts[] = 'id:' . $font_id;
@@ -752,7 +767,7 @@ class Typost {
                     }
 
                     // Method 3: Look for CSS variable references --font-{ID}
-                    if (preg_match_all('/--font-(\d+)/', $combined_content, $matches)) {
+                    if (preg_match_all(self::FONT_VARIABLE_PATTERN, $combined_content, $matches)) {
                         foreach ($matches[1] as $font_id) {
                             $used_fonts[] = 'id:' . $font_id;
                         }
@@ -4231,7 +4246,7 @@ class Typost {
             if (preg_match_all('/data-font=["\']([^"\']+)["\']/', $raw, $matches)) {
                 $fonts = array_merge($fonts, $matches[1]);
             }
-            if (preg_match_all('/--font-(\d+)/', $raw, $matches)) {
+            if (preg_match_all(self::FONT_VARIABLE_PATTERN, $raw, $matches)) {
                 foreach ($matches[1] as $font_id) {
                     $fonts[] = 'id:' . $font_id;
                 }
@@ -4961,7 +4976,7 @@ class Typost {
             // before the match makes the match count as text, so that case
             // misses a font; it does not add a wrong one.
             $length = strlen($markup);
-            $patterns = array('--font-' => '/--font-(\d+)/', 'data-font-id' => '/data-font-id=["\'](\d+)["\']/');
+            $patterns = array('--font-' => self::FONT_VARIABLE_PATTERN, 'data-font-id' => '/data-font-id=["\'](\d+)["\']/');
             foreach ($patterns as $marker => $pattern) {
                 if (false === strpos($markup, $marker) || !preg_match_all($pattern, $markup, $matches, PREG_OFFSET_CAPTURE)) {
                     continue;

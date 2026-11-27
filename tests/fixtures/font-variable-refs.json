@@ -1,0 +1,16 @@
+{
+	"_comment": "Font IDs that a font scan finds from --font-N in markup (#485). --font-N counts only as a whole custom property name: no letter, digit, underscore or hyphen right before the two hyphens or right after the number. Read by assets/js/__tests__/editor-font-kits.test.js (referencesFromHtml) and tests/Unit/FontVariableMatchTest.php (Typost::FONT_VARIABLE_PATTERN), so the PHP scans and the editor scan find the same IDs. ids: in order of first match, no repeats.",
+	"cases": [
+		{ "label": "a variable in a font family", "markup": "font-family: var(--font-36)", "ids": [36] },
+		{ "label": "a declaration of the variable", "markup": "--font-36: 'Bookmania', serif;", "ids": [36] },
+		{ "label": "a declaration in a style attribute", "markup": "<span style=\"--font-7:x\">a</span>", "ids": [7] },
+		{ "label": "the variable at the start of the text", "markup": "--font-5", "ids": [5] },
+		{ "label": "two variables, one repeated", "markup": "var(--font-12), serif; color: red; font-family: var(--font-40); x: var(--font-12)", "ids": [12, 40] },
+		{ "label": "two variables with nothing between them", "markup": "var(--font-3)var(--font-4)", "ids": [3, 4] },
+		{ "label": "a theme.json custom property", "markup": "font-size: var(--wp--custom--font-2-size)", "ids": [] },
+		{ "label": "a prefix before the name", "markup": "--brand-font-2: x; var(--my--font-2)", "ids": [] },
+		{ "label": "a suffix after the number", "markup": "var(--font-2-size)", "ids": [] },
+		{ "label": "a letter or underscore after the number", "markup": "var(--font-9_x) var(--font-9a)", "ids": [] },
+		{ "label": "a theme property next to a real reference", "markup": "var(--wp--custom--font-2-size) var(--font-36)", "ids": [36] }
+	]
+}
