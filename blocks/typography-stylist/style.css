@@ -39,7 +39,9 @@
 	clip-path: inset(50%);  /* Modern approach - makes content invisible while maintaining full size */
 	white-space: nowrap;
 	border-width: 0;
-	color: transparent; /* Make text invisible */
+	/* No color here: the clip alone hides the text, as in core's
+	   .screen-reader-text. A transparent color made WAVE report a contrast
+	   error, because WAVE reads rgba(0, 0, 0, 0) as black (#475). */
 	background: transparent; /* Ensure no background shows */
 	pointer-events: none; /* Don't block clicks on the styled text below */
 	z-index: 1; /* Ensure it's above styled text for focus */
@@ -48,10 +50,11 @@
 /* Windows Narrator Focus Enhancement:
  * When screen reader heading receives focus, show outline around the styled text area.
  * The element is already full-size (100% width/height) to match the styled headline.
- * IMPORTANT: The text content remains invisible (via clip-path/color above).
- * Only the OUTLINE becomes visible to highlight the styled text area.
- * Do NOT remove clip-path, overflow:hidden, or color:transparent on focus -
+ * IMPORTANT: The text content remains invisible (via the clip rules above).
+ * Do NOT remove clip, clip-path or overflow:hidden on focus -
  * this would cause duplicate visible text and break the dual-content pattern.
+ * Note: clip-path: inset(50%) also clips this outline, so in Chromium and
+ * Firefox the outline does not paint (measured for #475).
  */
 .wp-block-typost .visually-hidden:focus,
 .wp-block-typost .sr-only:focus,
@@ -199,7 +202,10 @@
  * the em value unresolved, so each line resolves it at its own size. The
  * frontend gets it from the render_block filter
  * (Typost::add_fit_letter_spacing_property()), the editor from
- * buildEditorStyle(), a paragraph style from its class rule. Without the
+ * buildEditorStyle(), a paragraph style from its class rule. A block that
+ * overrides a style's letter spacing (#451) writes its own value, or
+ * `normal` for an override to none, so its lines do not take the style's
+ * value. Without the
  * property the declaration is invalid at computed-value time and the line
  * inherits the heading's letter spacing, as before (a theme's own spacing
  * on headings, or a fit block with no letter spacing). */

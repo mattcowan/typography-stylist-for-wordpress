@@ -11,6 +11,7 @@
 
 import { PanelBody, RangeControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import renderOverrideReset from './override-reset';
 
 /**
  * Block-level letter spacing.
@@ -20,7 +21,7 @@ import { __ } from '@wordpress/i18n';
  */
 export default function renderLetterSpacingPanel(props) {
 	const {
-		letterSpacing, setAttributes
+		letterSpacing, overrideControls, setAttributes
 	} = props;
 
 	return (
@@ -38,6 +39,7 @@ export default function renderLetterSpacingPanel(props) {
 				allowReset
 				resetFallbackValue={0}
 			/>
+			{renderOverrideReset(overrideControls, 'letterSpacing', __('Letter Spacing', 'typography-stylist'))}
 		</PanelBody>
 	);
 }

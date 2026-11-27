@@ -23,6 +23,7 @@ These files hold post content as the editor saved it, one file for each save for
 | `first-letter-hang.html` | First Letter Hang 0.12 (#242). | current |
 | `case.html` | Small Caps with fake small caps off (#214). | current |
 | `style-class.html` | A block with a paragraph style class. | current |
+| `style-override.html` | The same block after Font Weight 400 and Discretionary Ligatures off in the sidebar: `"overrideKeys":["features","fontWeight"]`, and the visual copy keeps the class and has `font-feature-settings:normal;font-weight:400` only (#451). | current |
 | `after-detach.html` | The same block after Detach Style. | current |
 | `inline-spans.html` | Inline spans in a core Heading and Paragraphs: a responsive size in rem, a case, a responsive size in px, a fixed size. | core |
 | `inline-style-id.html` | An inline span with a paragraph style ID. | core |
@@ -34,7 +35,7 @@ All content is demo text.
 
 ## Notes
 
-- **Paragraph styles.** `style-class.html`, `inline-style-id.html` and `inline-style-override.html` refer to a paragraph style. A fixture cannot hold a database row, so the files say `{{STYLE_ID}}`, and the spec creates the style `STYLE` from `manifest.js`, puts its ID in, and deletes the style afterwards. The style must exist: for a missing style the editor removes the class from the block, and the post is dirty. A span keeps a missing style's ID.
+- **Paragraph styles.** `style-class.html`, `style-override.html`, `inline-style-id.html` and `inline-style-override.html` refer to a paragraph style. A fixture cannot hold a database row, so the files say `{{STYLE_ID}}`, and the spec creates the style `STYLE` from `manifest.js`, puts its ID in, and deletes the style afterwards. The style must exist: for a missing style the editor removes the class from the block, and the post is dirty. A span keeps a missing style's ID.
 - **Detach.** `after-detach.html` is what Detach Style wrote on the branch of #373, before #364 changed what Detach writes for a block with an inherited size. It pins how a block detached earlier loads.
 - **Fit to width.** The editor measures the lines of a fit block when it opens, and stores the ratios. The ratios depend on the fonts the machine has, the browser and the theme: the same block measured 0.1444 on a wp-env site and 0.1484 on a site with another theme. So the spec does not compare the numbers with the file. It checks the rules that tie them together (`fit-invariants.js`): each line's ratio in its `font-size` is `fitLineSizes[i]`, each line's word cap is `fitWordSizes[i]` when that is larger than the ratio and the ratio otherwise, and for these lines of two words the word size is larger than the ratio. It compares the rest of the block byte for byte. When the numbers differ from the file, the test adds a "measured" annotation with both sets.
 
@@ -60,7 +61,7 @@ Give file names to write only those files. The script reads every file from the 
 
 - `v1` and `v2`: the deprecated entry's own `save()`, run in the editor page, with core's serializer for the block comment. The `.after.html` files: the editor opens the old markup and serializes it again.
 - Typography Stylist blocks: inserted with the attribute values that the Inspector controls set, and saved by the editor. Fit to width: the editor measures the lines.
-- Paragraph styles, Detach and inline spans: the sidebar Paragraph Style select, Detach Style, and the inline Typography Stylist Features dialog. A style is applied to selected text with the event that the style browser sends, built by the module's `buildApplyEventDetail()`.
+- Paragraph styles, Detach and inline spans: the sidebar Paragraph Style select, the sidebar Font Weight select and OpenType Features toggle on top of a style, Detach Style, and the inline Typography Stylist Features dialog. A style is applied to selected text with the event that the style browser sends, built by the module's `buildApplyEventDetail()`.
 - The partial conversion: the inline dialog's "Convert to Typography Stylist Block". The dialog applies each change at once, so the script applies the feature, the case, the font, the weight, the italic, the letter spacing and the line height, undoes them in the editor (the text is plain again, and the dialog keeps the settings), and then converts.
 
 The script makes drafts, paragraph styles and one font definition named "ZZ E2E fixture …" and deletes each one by its ID. Before it makes the font, it deletes a font with the same name that a failed run left. It stops when the site writes new font sizes in px.

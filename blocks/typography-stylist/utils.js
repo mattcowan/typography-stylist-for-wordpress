@@ -5017,6 +5017,358 @@ export function stylePropertyOverrides(attrs, styleProps) {
 }
 
 /**
+ * The settings a Typography Stylist block can change on top of its
+ * paragraph style (#451), in the order save() writes them. Each key is a
+ * key of stylePropertyOverrides() and stands for the block attributes in
+ * STYLE_OVERRIDE_ATTRIBUTES.
+ *
+ * The block lists the keys the author changed in its `overrideKeys`
+ * attribute. Under a styleClass, save() and the editor write inline
+ * declarations only for the listed keys; the style's class renders the
+ * rest, so "Update Style" still restyles every setting that no block
+ * overrides. A value counts as an override only when the author changed it:
+ * a value that differs because the style changed later is a stale copy, not
+ * an override (the class renders the style).
+ */
+export const STYLE_OVERRIDE_KEYS = ['features', 'fontId', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'textCase', 'fontSize', 'fontVariationSettings', 'initialHang'];
+
+/**
+ * The block attributes of each override key. Fit line data (fitLineSizes,
+ * fitWordSizes, fitLineHangs) is content and is in no key.
+ */
+export const STYLE_OVERRIDE_ATTRIBUTES = {
+	features: ['features'],
+	fontId: ['fontId', 'fontFamily'],
+	fontWeight: ['fontWeight'],
+	fontStyle: ['fontStyle'],
+	letterSpacing: ['letterSpacing'],
+	lineHeight: ['lineHeight'],
+	textCase: ['textCase', 'fakeSmallCaps'],
+	fontSize: ['fontSize', 'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize'],
+	fontVariationSettings: ['fontVariationSettings'],
+	initialHang: ['initialHang']
+};
+
+/**
+ * A block's override list, cleaned: known keys only, each once, in the
+ * order of STYLE_OVERRIDE_KEYS.
+ *
+ * @param {*} list The overrideKeys attribute (anything; not an array gives []).
+ * @return {string[]} The keys.
+ */
+export function normalizeOverrideKeys(list) {
+	if (!Array.isArray(list) || !list.length) {
+		return [];
+	}
+	return STYLE_OVERRIDE_KEYS.filter((key) => list.indexOf(key) !== -1);
+}
+
+/**
+ * The override list as a map (key → true), the form buildEditorStyle()
+ * reads.
+ *
+ * @param {*} list The overrideKeys attribute.
+ * @return {Object} Map of listed keys.
+ */
+export function overrideKeysToMap(list) {
+	const map = {};
+	normalizeOverrideKeys(list).forEach((key) => {
+		map[key] = true;
+	});
+	return map;
+}
+
+function sameKeys(a, b) {
+	return a.length === b.length && a.every((key, i) => key === b[i]);
+}
+
+function hasOwn(object, key) {
+	return Object.prototype.hasOwnProperty.call(object, key);
+}
+
+/**
+ * Values that mean "the theme's" and that no CSS keyword can write past a
+ * paragraph style's class (round 1 of #451): the weight Theme default, the
+ * font (Default) and the size Inherit. Choosing one of them under a style is
+ * not an override, so the panel never says the block has its own value
+ * while the canvas shows the style. (No letter spacing, no line height,
+ * Inherit font style and no axes do have a keyword: `normal`.)
+ */
+const THEME_VALUE_WITHOUT_KEYWORD = {
+	fontWeight: (a) => !a.fontWeight,
+	fontId: (a) => !a.fontId && !a.fontFamily,
+	fontSize: (a) => a.fontSize !== 'responsive' && a.fontSize !== 'fit'
+		&& !(/^\d+(\.\d+)?$/.test(String(a.fontSize)) && Number(a.fontSize) > 0)
+};
+
+/**
+ * Add the override list to an attribute change of a block (#451).
+ *
+ * Every setAttributes() call of the block's editor goes through this. Under
+ * a paragraph style, each override key whose attributes the change sets is
+ * listed when the new value differs from the style, and taken off the list
+ * when it equals the style. Keys the change does not set keep their state,
+ * so a later change of the style does not make a key an override. The
+ * theme's weight, font or size (THEME_VALUE_WITHOUT_KEYWORD) is never
+ * listed: no declaration can show it past the class, and the derived
+ * re-sync (resolveDerivedStyleSync()) then gives the key the style's value.
+ *
+ * - A change that sets styleClass (a style apply, Detach, "Remove all
+ *   styling") empties the list: the block then starts from the style's
+ *   values, or has no style.
+ * - A change that sets overrideKeys itself is left as it is.
+ * - With no style (no styleClass, or a class that names no known style)
+ *   nothing is listed.
+ * - When the size becomes an override, the block takes the style's size
+ *   unit (#233), as Detach does: the editor previews a size under a style
+ *   in the style's unit, so save() writes the same.
+ *
+ * @param {Object}     current The block's attributes before the change.
+ * @param {Object}     patch   The change.
+ * @param {Array|null} styles  window.typostData.paragraphStyles.
+ * @return {Object} The change, with overrideKeys (and fontSizeUnit) when they change.
+ */
+export function resolveOverrideKeysPatch(current, patch, styles) {
+	if (!patch || typeof patch !== 'object') {
+		return patch;
+	}
+	const attrs = current || {};
+	if (hasOwn(patch, 'overrideKeys')) {
+		return patch;
+	}
+	const listed = normalizeOverrideKeys(attrs.overrideKeys);
+	if (hasOwn(patch, 'styleClass')) {
+		return listed.length ? { ...patch, overrideKeys: [] } : patch;
+	}
+	const style = findParagraphStyleByClass(attrs.styleClass, styles);
+	if (!style) {
+		return patch;
+	}
+	const touched = STYLE_OVERRIDE_KEYS.filter((key) => STYLE_OVERRIDE_ATTRIBUTES[key].some((attr) => hasOwn(patch, attr)));
+	if (!touched.length) {
+		return patch;
+	}
+	const merged = { ...attrs, ...patch };
+	const differs = stylePropertyOverrides(merged, style.properties);
+	const isOverride = (key) => !!differs[key] && !(THEME_VALUE_WITHOUT_KEYWORD[key] && THEME_VALUE_WITHOUT_KEYWORD[key](merged));
+	const next = STYLE_OVERRIDE_KEYS.filter((key) => (touched.indexOf(key) !== -1 ? isOverride(key) : listed.indexOf(key) !== -1));
+	const result = sameKeys(next, listed) ? patch : { ...patch, overrideKeys: next };
+	if (next.indexOf('fontSize') !== -1 && !hasOwn(patch, 'fontSizeUnit')) {
+		const unit = resolveStyleFontSizeUnit(style);
+		if (attrs.fontSizeUnit !== unit) {
+			return { ...result, fontSizeUnit: unit };
+		}
+	}
+	return result;
+}
+
+/**
+ * The style's values for some override keys, as block attributes.
+ *
+ * @param {string[]} keys  Override keys.
+ * @param {Object}   props The style's properties after normalizeApplyProperties().
+ * @param {Object}   idMap fontIdMap (font id → { family }), for fontFamily.
+ * @return {Object} Attributes; a property the style leaves undefined is left out.
+ */
+function styleValuesForKeys(keys, props, idMap) {
+	const values = {};
+	keys.forEach((key) => {
+		STYLE_OVERRIDE_ATTRIBUTES[key].forEach((attr) => {
+			if (attr !== 'fontFamily' && props[attr] !== undefined) {
+				values[attr] = props[attr];
+			}
+		});
+	});
+	if (values.fontId !== undefined && idMap && idMap[values.fontId]) {
+		values.fontFamily = idMap[values.fontId].family;
+	} else if (values.fontId !== undefined && !values.fontId) {
+		// A style with no font (#451 round 3): an old family would still
+		// print as data-font and load its @font-face on the frontend. The
+		// style's own family is kept if it ever carries one (stored styles
+		// do not: sanitize_properties() has no fontFamily key).
+		values.fontFamily = typeof props.fontFamily === 'string' ? props.fontFamily : '';
+	}
+	return values;
+}
+
+/**
+ * Whether a re-sync may copy the style's value into an unlisted key (#451
+ * rounds 1 and 2). Shared by resolveStyleSyncUpdate() (after Update Style)
+ * and resolveDerivedStyleSync() (an old copy), so both follow one rule.
+ *
+ * The size never follows when the block or the style is fit to width: fit
+ * writes the lines, their cap and the typost-fit class into the markup
+ * under a styleClass, so a copy would turn a fit block into a non-fit block
+ * (or back) at the next save. normalizeApplyProperties() gives a style with
+ * no size 'inherit', which made Update Style anywhere in the post drop the
+ * fit lines. The font does follow: under the class data-font-id and
+ * data-font render nothing and only feed the PHP font scan, and the style's
+ * own font loads through typost_content_font_ids.
+ *
+ * @param {string} key     Override key.
+ * @param {Object} current The block's attributes.
+ * @param {Object} style   The block's paragraph style.
+ * @param {Object} props   The style's properties after normalizeApplyProperties().
+ * @return {boolean} True when the key may follow the style.
+ */
+function syncsKey(key, current, style, props) {
+	if (key !== 'fontSize') {
+		return true;
+	}
+	const p = props || {};
+	const styleProps = (style && style.properties) || {};
+	return current.fontSize !== 'fit' && p.fontSize !== 'fit' && styleProps.fontSize !== 'fit';
+}
+
+/**
+ * Whether this block is the one that ran "Update Style" (#451).
+ *
+ * The block whose settings the style took clears the keys it saved into
+ * the style; every other block keeps its overrides. The Paragraph Styles
+ * module asks the selected block for the settings to save, so the source
+ * is the selected block. Since #452 the typost-paragraph-styles-updated
+ * event can say which style changed and from which editor
+ * (`detail: { styleId, editorSource }`); when it does, the style must be
+ * this block's style and the editor the block's sidebar ('inspector') or
+ * its Quick Feature Toggles ('qft'). Other senders fire the event with no
+ * detail: then only the selection decides. resolveStyleSyncUpdate() clears
+ * only keys whose value now equals the style, so a wrong guess clears
+ * nothing that renders differently. One accepted case: Update Style from a
+ * text selection in the Quick Feature Toggles ('qft') also clears a
+ * block-level override whose value equals the new style value; it renders
+ * the same, and later changes of the style then reach the block.
+ *
+ * @param {?Object} detail     The event's detail, if any.
+ * @param {Object}  style      The block's paragraph style (after the update).
+ * @param {boolean} isSelected The block is the selected block.
+ * @return {boolean} True for the source block.
+ */
+export function isStyleUpdateSource(detail, style, isSelected) {
+	if (!isSelected || !style) {
+		return false;
+	}
+	if (!detail || typeof detail !== 'object') {
+		return true;
+	}
+	if (detail.styleId !== undefined && detail.styleId !== null && String(detail.styleId) !== String(style.id)) {
+		return false;
+	}
+	if (detail.editorSource !== undefined && detail.editorSource !== 'inspector' && detail.editorSource !== 'qft') {
+		return false;
+	}
+	return true;
+}
+
+/**
+ * The attribute change that brings a block back in line with its paragraph
+ * style after the style changed (typost-paragraph-styles-updated).
+ *
+ * The block's attributes are a copy of the style's values, taken when the
+ * style was applied. Every setting the block does not override takes the
+ * style's values (PS-5), so the sidebar shows what the class renders.
+ * Listed keys keep the block's own values (#451). The block that ran
+ * "Update Style" (isSource) takes its listed keys off the list when the
+ * style now has the same value: they are the style's now. A fit to width
+ * size never follows (syncsKey(), round 2): a fit block keeps its fit lines.
+ *
+ * @param {Object}  current  The block's attributes.
+ * @param {Object}  style    The block's paragraph style (after the update).
+ * @param {Object}  props    The style's properties after normalizeApplyProperties().
+ * @param {Object}  idMap    fontIdMap, for fontFamily.
+ * @param {boolean} isSource The block ran Update Style (isStyleUpdateSource()).
+ * @return {?Object} Attributes to set, or null when the block is in line.
+ */
+export function resolveStyleSyncUpdate(current, style, props, idMap, isSource) {
+	if (!current || !style || !style.properties) {
+		return null;
+	}
+	const listed = normalizeOverrideKeys(current.overrideKeys);
+	const differs = stylePropertyOverrides(current, style.properties);
+	const kept = isSource ? listed.filter((key) => differs[key]) : listed;
+	const following = STYLE_OVERRIDE_KEYS.filter((key) => kept.indexOf(key) === -1 && syncsKey(key, current, style, props));
+	const listChanged = !sameKeys(kept, listed);
+	if (!listChanged && !following.some((key) => differs[key])) {
+		return null;
+	}
+	const update = styleValuesForKeys(following, props || {}, idMap);
+	if (listChanged) {
+		update.overrideKeys = kept;
+	}
+	return update;
+}
+
+/**
+ * The derived re-sync of a block with an active paragraph style (round 1 of
+ * #451): its unlisted settings follow the style.
+ *
+ * A block saved before its style changed (in a post that was not open at
+ * the time), or brought back by undo, holds old copies of the style's
+ * values. They are not overrides, so the class renders the style; without
+ * this the sidebar showed the old value with "(modified)", Detach wrote it,
+ * the fit measurement measured it, and Update Style published it into the
+ * style. The block editor applies this change as not persistent (no undo
+ * step, the post is not marked as changed); the saved post takes it with
+ * the next real edit. The list is never changed here.
+ *
+ * It copies only the keys that differ (so the family is not filled in
+ * because another key changed), and follows syncsKey(): never the size
+ * when the block or the style is fit to width (smoke post 17716: fit writes
+ * the lines, their cap and the typost-fit class). An old font does follow
+ * (round 2): under the class data-font-id and data-font render nothing, so
+ * the markup changes at the next save only in those attributes, like the
+ * block comment. A fit block whose old value changes its width (letter
+ * spacing) is then measured again, so its line sizes change at the next
+ * save too, through the same not persistent path (#388).
+ *
+ * Only real changes are returned: a style property that is not normalized
+ * on apply (the size bounds) can leave a difference that no copy corrects,
+ * and writing the same values again would only repeat.
+ *
+ * @param {Object} current The block's attributes.
+ * @param {Object} style   The block's paragraph style.
+ * @param {Object} props   The style's properties after normalizeApplyProperties().
+ * @param {Object} idMap   fontIdMap, for fontFamily.
+ * @return {?Object} Attributes that change, or null.
+ */
+export function resolveDerivedStyleSync(current, style, props, idMap) {
+	if (!current || !style || !style.properties) {
+		return null;
+	}
+	const p = props || {};
+	const listed = normalizeOverrideKeys(current.overrideKeys);
+	const differs = stylePropertyOverrides(current, style.properties);
+	const keys = STYLE_OVERRIDE_KEYS.filter((key) => differs[key] && listed.indexOf(key) === -1 && syncsKey(key, current, style, p));
+	const update = styleValuesForKeys(keys, p, idMap);
+	const changed = {};
+	Object.keys(update).forEach((key) => {
+		if (JSON.stringify(update[key]) !== JSON.stringify(current[key])) {
+			changed[key] = update[key];
+		}
+	});
+	return Object.keys(changed).length ? changed : null;
+}
+
+/**
+ * The attribute change of a reset control (#451): the setting follows the
+ * paragraph style again. The key's attributes take the style's values and
+ * the key leaves the list.
+ *
+ * @param {Object} current The block's attributes.
+ * @param {string} key     The override key.
+ * @param {Object} props   The style's properties after normalizeApplyProperties().
+ * @param {Object} idMap   fontIdMap, for fontFamily.
+ * @return {?Object} Attributes to set, or null for an unknown key.
+ */
+export function buildStyleOverrideReset(current, key, props, idMap) {
+	if (!STYLE_OVERRIDE_ATTRIBUTES[key]) {
+		return null;
+	}
+	const update = styleValuesForKeys([key], props || {}, idMap);
+	update.overrideKeys = normalizeOverrideKeys((current || {}).overrideKeys).filter((listedKey) => listedKey !== key);
+	return update;
+}
+
+/**
  * Selector for the plugin's own modal frames (inline modal, block QFT modal,
  * Glyphs panel, Paragraph Styles browser). All of them render through
  * wp.components.Modal with a `typost-` class on the frame.

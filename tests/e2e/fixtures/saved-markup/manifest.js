@@ -102,6 +102,12 @@ const FIXTURES = [
 		style: true,
 	},
 	{
+		file: 'style-override.html',
+		title: 'block with a paragraph style class and two settings of its own (#451)',
+		paths: [ 'current' ],
+		style: true,
+	},
+	{
 		file: 'after-detach.html',
 		title: 'block after Detach Style',
 		paths: [ 'current' ],

@@ -100,6 +100,15 @@ describe('buildEditorStyle under a paragraph style', () => {
 		expect(buildEditorStyle(block({ fontSize: 'fit', letterSpacing: 20, styleOverrides: { letterSpacing: true } }))['--typost-fit-letter-spacing']).toBe('0.02em');
 	});
 
+	it('writes normal to the property for an override to none on top of a style, so the lines do not take the style\'s spacing (#451)', () => {
+		const none = buildEditorStyle(block({ fontSize: 'fit', letterSpacing: 0, styleOverrides: { letterSpacing: true } }));
+		expect(none.letterSpacing).toBe('normal');
+		expect(none['--typost-fit-letter-spacing']).toBe('normal');
+		// control: not without the override, and not on a block that is not fit
+		expect(buildEditorStyle(block({ fontSize: 'fit', letterSpacing: 0, styleOverrides: {} }))).not.toHaveProperty('--typost-fit-letter-spacing');
+		expect(buildEditorStyle(block({ fontSize: 'responsive', letterSpacing: 0, styleOverrides: { letterSpacing: true } }))).not.toHaveProperty('--typost-fit-letter-spacing');
+	});
+
 	it('writes a hang override even at 0, so the block can cancel the style', () => {
 		expect(buildEditorStyle(block({ styleOverrides: { initialHang: true } }))['--typost-hang']).toBe('0');
 	});

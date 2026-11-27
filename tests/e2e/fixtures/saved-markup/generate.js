@@ -23,8 +23,10 @@
  *   the values the Inspector controls set, and the editor's save() writes
  *   it. Fit to width: the editor measures the lines.
  * - Paragraph styles, Detach and inline spans: through the editor's own
- *   controls (the sidebar Paragraph Style select, Detach Style, the inline
- *   Typography Stylist Features dialog, and the style browser of the block
+ *   controls (the sidebar Paragraph Style select, the sidebar Font Weight
+ *   select and OpenType Features toggle on top of a style (#451), Detach
+ *   Style, the inline Typography Stylist Features dialog, and the style
+ *   browser of the block
  *   toolbar's Paragraph Styles button). The partial conversion: the inline
  *   dialog's "Convert to Typography Stylist Block" (#369).
  * - The px inline span is written with the "Write new font sizes in px"
@@ -307,6 +309,8 @@ const GENERATORS = {
 	'case.html': (page) => currentBlock(page, { textCase: 'small-caps', fakeSmallCaps: false }),
 	// The block under a style, then the same block after Detach Style
 	'style-class.html': (page) => styledBlock(page, false),
+	// The same block after two sidebar changes on top of the style (#451)
+	'style-override.html': (page) => styledBlock(page, false, overrideWeightAndFeature),
 	'after-detach.html': (page) => styledBlock(page, true),
 	'inline-spans.html': inlineSpans,
 	'inline-style-id.html': inlineStyleId,
@@ -314,7 +318,20 @@ const GENERATORS = {
 	'partial-convert.html': partialConvert,
 };
 
-async function styledBlock(page, detach) {
+// The sidebar's Font Weight select and OpenType Features toggle, on top of
+// the style (#451): weight 400 and no Discretionary Ligatures, both
+// different from STYLE, so the block lists them in overrideKeys
+async function overrideWeightAndFeature(page) {
+	await page.getByRole('button', { name: 'Font Weight', exact: true }).first().click();
+	await page.getByRole('combobox', { name: 'Font Weight' }).selectOption('400');
+	const features = page.getByRole('button', { name: 'OpenType Features', exact: true }).first();
+	if ((await features.getAttribute('aria-expanded')) !== 'true') {
+		await features.click();
+	}
+	await page.getByLabel('Discretionary Ligatures').first().click();
+}
+
+async function styledBlock(page, detach, change) {
 	const style = await createStyle(page, STYLE);
 	try {
 		await openEditor(page);
@@ -330,6 +347,13 @@ async function styledBlock(page, detach) {
 		let content = await settledContent(page);
 		if (!content.includes(`typost-ps-${style.id}`)) {
 			fail('The style was not applied');
+		}
+		if (change) {
+			await change(page);
+			content = await settledContent(page);
+			if (!content.includes('"overrideKeys":[')) {
+				fail('The change on top of the style was not listed in overrideKeys');
+			}
 		}
 		if (!detach) {
 			return tokenize(content, style);

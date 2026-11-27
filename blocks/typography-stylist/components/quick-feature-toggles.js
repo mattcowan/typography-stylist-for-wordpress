@@ -386,7 +386,7 @@ export default function renderQuickFeatureToggles(props) {
 						}}
 						help={
 							inlineCaseFromStyle
-							? __('The paragraph style sets this case. To change it for the selected text, choose another case. To make it the text’s own case, click “Detach Style” first.', 'typography-stylist')
+							? __('The paragraph style sets this case. A case that you choose here changes only the selected text.', 'typography-stylist')
 							: normalizeTextCase(inlineTextCase) === 'capitalize'
 							? __('Capitalizes the first letter of every word, including short words such as “of” and “the”, and the letter after a hyphen.', 'typography-stylist')
 							: (normalizeTextCase(inlineTextCase) === 'uppercase'

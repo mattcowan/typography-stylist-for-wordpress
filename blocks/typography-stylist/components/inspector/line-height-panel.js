@@ -11,6 +11,7 @@
 
 import { PanelBody, RangeControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import renderOverrideReset from './override-reset';
 
 /**
  * Block-level line height.
@@ -20,7 +21,7 @@ import { __ } from '@wordpress/i18n';
  */
 export default function renderLineHeightPanel(props) {
 	const {
-		lineHeight, setAttributes
+		lineHeight, overrideControls, setAttributes
 	} = props;
 
 	return (
@@ -42,6 +43,7 @@ export default function renderLineHeightPanel(props) {
 				]}
 				renderTooltipContent={(value) => lineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
 			/>
+			{renderOverrideReset(overrideControls, 'lineHeight', __('Line Height', 'typography-stylist'))}
 		</PanelBody>
 	);
 }

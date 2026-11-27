@@ -2087,8 +2087,11 @@ class Typost {
      * heading's own declaration, so it is what save() wrote, also for
      * content saved before #458: saved markup does not change (no
      * deprecation). A block with a paragraph style has no inline letter
-     * spacing; the style's class rule sets the property. The editor sets it
-     * in buildEditorStyle().
+     * spacing, and the style's class rule sets the property, unless the
+     * block overrides the letter spacing (#451): then save() writes its own
+     * em value, or `letter-spacing: normal` for an override to none, and
+     * this filter copies either one, so the lines do not take the style's
+     * value. The editor sets it in buildEditorStyle().
      *
      * @since 2.4.0
      * @param string $block_content The rendered block HTML.
@@ -2113,11 +2116,12 @@ class Typost {
     /**
      * Add `--typost-fit-letter-spacing` to one opening tag, when it is a fit
      * heading (class `typost-fit`) whose inline style sets an em letter
-     * spacing.
+     * spacing, or `normal`.
      *
-     * Only a number in em is copied (save.js writes no other form), so the
-     * value needs no new escaping. A tag that already has the property, or
-     * has no such declaration, is returned unchanged.
+     * Only a number in em or the keyword `normal` is copied (save.js writes
+     * no other form: `normal` is an override to none on top of a paragraph
+     * style, #451), so the value needs no new escaping. A tag that already
+     * has the property, or has no such declaration, is returned unchanged.
      *
      * @since 2.4.0
      * @param string $tag An opening tag.
@@ -2130,7 +2134,7 @@ class Typost {
         }
         $css = $style[1][0];
         if (false !== strpos($css, '--typost-fit-letter-spacing')
-            || !preg_match('/(?:^|;)\s*letter-spacing\s*:\s*(-?(?:\d+(?:\.\d+)?|\.\d+)em)\s*(?:;|$)/i', $css, $spacing)) {
+            || !preg_match('/(?:^|;)\s*letter-spacing\s*:\s*(-?(?:\d+(?:\.\d+)?|\.\d+)em|normal)\s*(?:;|$)/i', $css, $spacing)) {
             return $tag;
         }
         $added = rtrim($css, "; \t") . ';--typost-fit-letter-spacing:' . $spacing[1];
