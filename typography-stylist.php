@@ -560,6 +560,43 @@ class Typost {
     }
 
     /**
+     * Cache key of a list page's font detection answer (#486).
+     *
+     * The key hashes the IDs of the listed posts, so a post save cannot name
+     * the keys of the list pages that show the post. Without a persistent
+     * object cache the transients are option rows, and
+     * clear_post_content_caches() deletes them with a wildcard. With one
+     * (Redis, Memcached) they live in the object cache, which cannot delete
+     * keys by prefix: the hash then also takes the generation of the
+     * `typost_archive_fonts` cache group (core's `last_changed` pattern,
+     * WordPress 4.7+), and clear_post_content_caches() deletes that
+     * generation, so the next view misses and scans again without a flush of
+     * the whole object cache. Keys of old generations expire with their
+     * 12-hour lifetime; an evicted generation only causes a miss.
+     *
+     * No generation without a persistent object cache: there `last_changed`
+     * lives for one request only, so every view would miss and leave an
+     * orphan row.
+     *
+     * The generation goes into the hash after the prefix, so the key keeps
+     * its length and the `typost_has_styled_%` / `typost_used_fonts_%` row
+     * matches of clear_font_detection_cache() still find it.
+     *
+     * @since 2.4.0
+     *
+     * @param string $prefix   Key prefix, ending in `_archive_`.
+     * @param array  $post_ids IDs of the posts on the page, in query order.
+     * @return string Transient name.
+     */
+    private function get_archive_font_cache_key($prefix, $post_ids) {
+        $hashed = serialize($post_ids);
+        if (wp_using_ext_object_cache()) {
+            $hashed .= '|' . wp_cache_get_last_changed('typost_archive_fonts');
+        }
+        return $prefix . md5($hashed);
+    }
+
+    /**
      * Check if current page has styled content
      * Works for all singular post types (posts, pages, custom post types) and archive pages
      */
@@ -615,7 +652,7 @@ class Typost {
 
             // Build cache key from all post IDs on this page
             $post_ids = wp_list_pluck($wp_query->posts, 'ID');
-            $cache_key = 'typost_has_styled_archive_' . md5(serialize($post_ids));
+            $cache_key = $this->get_archive_font_cache_key('typost_has_styled_archive_', $post_ids);
             $has_styled = get_transient($cache_key);
 
             if (false === $has_styled) {
@@ -729,7 +766,7 @@ class Typost {
 
             // Build cache key from all post IDs on this page
             $post_ids = wp_list_pluck($wp_query->posts, 'ID');
-            $cache_key = 'typost_used_fonts_archive_' . md5(serialize($post_ids));
+            $cache_key = $this->get_archive_font_cache_key('typost_used_fonts_archive_', $post_ids);
             $used_fonts = get_transient($cache_key);
 
             if (false === $used_fonts) {
@@ -2788,8 +2825,10 @@ class Typost {
         // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
         // The row deletes above do not reach a persistent object cache, where
-        // get_transient() would keep answering from the cached copy. The other
-        // wildcard deletion paths flush for the same reason.
+        // get_transient() would keep answering from the cached copy.
+        // invalidate_editor_data_cache() flushes for the same reason. The
+        // archive key generation (#486) cannot replace this flush: the
+        // per-post and font CSS keys of every page have no generation.
         if (wp_using_ext_object_cache()) {
             wp_cache_flush();
         }
@@ -2837,8 +2876,8 @@ class Typost {
      *
      * A save of any status clears the post's own caches (#480): a draft,
      * pending or scheduled post kept the fonts of its first view for 12
-     * hours. The archive caches (a wildcard delete, and an object cache
-     * flush under a persistent object cache) are cleared only for a
+     * hours. The archive caches (a wildcard delete, and a new key
+     * generation under a persistent object cache) are cleared only for a
      * published or private post, because archives list no other status
      * (clear_font_caches_for_status()). Autosaves and revisions clear
      * nothing.
@@ -3070,8 +3109,9 @@ class Typost {
      *
      * The archive caches go with a wildcard row delete. Under a persistent
      * object cache (Redis, Memcached) the transients are not in the options
-     * table, so this also flushes the whole object cache; without one it
-     * does not flush (#484).
+     * table, so this also deletes the generation of the archive keys
+     * (get_archive_font_cache_key()); it does not flush the object cache
+     * (#484, #486).
      *
      * Does NOT clear global font CSS caches (admin_font_css, editor_font_css,
      * block_font_css, css_variable_decls) because those only change when fonts
@@ -3080,7 +3120,8 @@ class Typost {
      * change, a new cache key is generated automatically.
      *
      * @since 1.1.9
-     * @since 2.4.0 Flushes the object cache only under a persistent object cache.
+     * @since 2.4.0 Deletes the archive key generation in place of an object
+     *              cache flush, and only under a persistent object cache.
      * @access private
      *
      * @param int $post_id Post ID whose caches should be cleared.
@@ -3116,11 +3157,14 @@ class Typost {
         // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
         // The row delete does not reach a persistent object cache, where the
-        // archive transients live and get_transient() would keep answering
-        // from them. Without one the flush only emptied the per-request cache
-        // (#484), as in clear_font_detection_cache().
+        // archive transients live, and the object cache cannot delete keys by
+        // prefix. Deleting the generation in their keys
+        // (get_archive_font_cache_key()) makes every archive answer stale
+        // without a flush of the other cached values of the site (#486).
+        // Without a persistent object cache the keys have no generation and
+        // the row delete is enough (#484).
         if (wp_using_ext_object_cache()) {
-            wp_cache_flush();
+            wp_cache_delete('last_changed', 'typost_archive_fonts');
         }
     }
 

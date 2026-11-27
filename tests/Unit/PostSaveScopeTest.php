@@ -63,6 +63,9 @@ class PostSaveScopeTest extends TestCase {
     /** @var int wp_cache_flush() calls */
     private $flushes;
 
+    /** @var int Deletes of the archive key generation (#486) */
+    private $generationDeletes;
+
     /** @var array<int, string|false> What get_post_type() reports, by post ID */
     private $types;
 
@@ -81,6 +84,7 @@ class PostSaveScopeTest extends TestCase {
         $this->deletes = [];
         $this->queries = [];
         $this->flushes = 0;
+        $this->generationDeletes = 0;
         $this->types = [];
         $this->viewableChecks = [];
 
@@ -88,7 +92,12 @@ class PostSaveScopeTest extends TestCase {
             $this->deletes[] = $key;
             return true;
         });
-        Functions\when('wp_cache_delete')->justReturn(true);
+        Functions\when('wp_cache_delete')->alias(function ($key, $group = '') {
+            if ('last_changed' === $key && 'typost_archive_fonts' === $group) {
+                $this->generationDeletes++;
+            }
+            return true;
+        });
         Functions\when('wp_cache_flush')->alias(function () {
             $this->flushes++;
             return true;
@@ -97,8 +106,9 @@ class PostSaveScopeTest extends TestCase {
             return abs((int) $value);
         });
         Functions\when('wp_is_post_revision')->justReturn(false);
-        // A persistent object cache: a full clear also flushes it (#484
-        // flushes only then), so a full clear is visible as one flush
+        // A persistent object cache: a full clear also deletes the archive
+        // key generation (#486, only then), so a full clear is visible as one
+        // generation delete
         Functions\when('wp_using_ext_object_cache')->justReturn(true);
         Functions\when('get_post_type')->alias(function ($post_id) {
             return array_key_exists($post_id, $this->types) ? $this->types[$post_id] : false;
@@ -160,14 +170,19 @@ class PostSaveScopeTest extends TestCase {
         $this->assertSame([], $this->deletes, $message . ': per-post transients');
         $this->assertSame([], $this->queries, $message . ': wildcard delete');
         $this->assertSame(0, $this->flushes, $message . ': object cache flush');
+        $this->assertSame(0, $this->generationDeletes, $message . ': archive key generation');
     }
 
-    /** One full clear, as clear_post_content_caches() ran it at #480. */
+    /**
+     * One full clear, as clear_post_content_caches() ran it at #480, with
+     * the archive key generation in place of the object cache flush (#486).
+     */
     private function assertFullClear($id, $message = '') {
         $this->assertContains('typost_has_styled_' . $id, $this->deletes, $message);
         $this->assertContains('typost_used_fonts_' . $id, $this->deletes, $message);
         $this->assertCount(1, $this->archiveCacheDeletes(), $message);
-        $this->assertSame(1, $this->flushes, $message);
+        $this->assertSame(1, $this->generationDeletes, $message);
+        $this->assertSame(0, $this->flushes, $message . ': object cache flush');
     }
 
     // ── Types that clear nothing ────────────────────────────────────────────
@@ -244,6 +259,7 @@ class PostSaveScopeTest extends TestCase {
             $this->deletes = [];
             $this->queries = [];
             $this->flushes = 0;
+            $this->generationDeletes = 0;
 
             $this->save($post_type, $status);
 
@@ -259,12 +275,14 @@ class PostSaveScopeTest extends TestCase {
             $this->deletes = [];
             $this->queries = [];
             $this->flushes = 0;
+            $this->generationDeletes = 0;
 
             $this->save($post_type, $status);
 
             $this->assertSame(['typost_has_styled_7', 'typost_used_fonts_7'], $this->deletes, $post_type . ' ' . $status);
             $this->assertSame([], $this->queries, $post_type . ' ' . $status);
             $this->assertSame(0, $this->flushes, $post_type . ' ' . $status);
+            $this->assertSame(0, $this->generationDeletes, $post_type . ' ' . $status);
         }
     }
 
@@ -280,7 +298,8 @@ class PostSaveScopeTest extends TestCase {
         $this->save('wp_block');
 
         $this->assertSame(['book', 'acme_log'], $this->viewableChecks);
-        $this->assertSame(2, $this->flushes, 'book and wp_block');
+        $this->assertSame(2, $this->generationDeletes, 'book and wp_block');
+        $this->assertSame(0, $this->flushes);
     }
 
     // ── Where the post type comes from ──────────────────────────────────────
@@ -356,6 +375,7 @@ class PostSaveScopeTest extends TestCase {
             $this->deletes = [];
             $this->queries = [];
             $this->flushes = 0;
+            $this->generationDeletes = 0;
 
             $this->delete($post_type, 7, $status);
 
@@ -375,12 +395,14 @@ class PostSaveScopeTest extends TestCase {
             $this->deletes = [];
             $this->queries = [];
             $this->flushes = 0;
+            $this->generationDeletes = 0;
 
             $this->delete($post_type, 7, $status);
 
             $this->assertSame(['typost_has_styled_7', 'typost_used_fonts_7'], $this->deletes, $post_type . ' ' . $status);
             $this->assertSame([], $this->queries, $post_type . ' ' . $status);
             $this->assertSame(0, $this->flushes, $post_type . ' ' . $status);
+            $this->assertSame(0, $this->generationDeletes, $post_type . ' ' . $status);
         }
     }
 
@@ -398,6 +420,7 @@ class PostSaveScopeTest extends TestCase {
 
         $this->assertSame([], $this->queries);
         $this->assertSame(0, $this->flushes);
+        $this->assertSame(0, $this->generationDeletes);
         $this->assertCount(30, $this->deletes, 'Two own keys for each of the 15 posts');
     }
 
