@@ -40,6 +40,12 @@ function hiddenCopyRules() {
 	);
 }
 
+/** The hidden classes that have a :focus selector in the source, comments removed. */
+function focusRuleClasses(source) {
+	const clean = source.replace(/\/\*[\s\S]*?\*\//g, '');
+	return HIDDEN_CLASSES.filter((cls) => clean.includes(cls + ':focus'));
+}
+
 describe('screen reader copy CSS (#475)', () => {
 	it('control: the rule that hides the copy is found, with its clip', () => {
 		const found = hiddenCopyRules();
@@ -59,15 +65,13 @@ describe('screen reader copy CSS (#475)', () => {
 	it('has no :focus rule for the copy (#476)', () => {
 		// The copy has no tabindex, so it cannot take focus, and the clip
 		// would hide an outline anyway.
-		const clean = styleCss.replace(/\/\*[\s\S]*?\*\//g, '');
-		for (const cls of HIDDEN_CLASSES) {
-			expect(clean).not.toContain(cls + ':focus');
-		}
+		expect(focusRuleClasses(styleCss)).toEqual([]);
 	});
 
-	it('control: the :focus check finds a planted rule', () => {
-		const planted = '.wp-block-typost .sr-only:focus { outline: 3px solid; }';
-		expect(planted).toContain('.sr-only:focus');
+	it('control: the :focus check finds a planted rule, also inside a media query, and skips a comment', () => {
+		expect(focusRuleClasses('.wp-block-typost .sr-only:focus { outline: 3px solid; }')).toEqual(['.sr-only']);
+		expect(focusRuleClasses('@media (prefers-contrast: high) { .wp-block-typost .screen-reader-text:focus { outline-width: 4px; } }')).toEqual(['.screen-reader-text']);
+		expect(focusRuleClasses('/* .sr-only:focus was removed (#476) */')).toEqual([]);
 	});
 
 	it('control: the color check finds a color declaration', () => {
