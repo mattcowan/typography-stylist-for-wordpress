@@ -601,7 +601,7 @@ These hooks fire inside the inline editor modal (the "T" toolbar button popover)
 
 | Hook Name | Location | Typical Use |
 |---|---|---|
-| `typost_inline_modal_top` | After sticky notice, before font controls | Paragraph styles dropdown |
+| `typost_inline_modal_top` | After sticky notice, before font controls | Paragraph Style panel |
 | `typost_inline_after_font_controls` | After font weight selector | Variable font axes |
 | `typost_inline_before_features` | Before "Individual Features" section | Glyphs panel |
 | `typost_inline_after_features` | After feature toggle panels | Additional feature sections |
@@ -621,7 +621,7 @@ These hooks fire inside the Typography Stylist block's Quick Feature Toggle popo
 
 | Hook Name | Location | Typical Use |
 |---|---|---|
-| `typost_qft_modal_top` | After drag notice | Paragraph styles dropdown |
+| `typost_qft_modal_top` | After drag notice | Paragraph Style panel |
 | `typost_qft_after_font_controls` | After font weight | Variable font axes |
 | `typost_qft_before_features` | Before feature summary | Glyphs panel |
 | `typost_qft_after_features` | After feature toggles | Additional sections |
@@ -643,7 +643,7 @@ These hooks fire inside the Typography Stylist block's sidebar Inspector Control
 
 | Hook Name | Location | Typical Use |
 |---|---|---|
-| `typost_inspector_top` | Before all panels (top of sidebar) | Paragraph styles dropdown |
+| `typost_inspector_top` | Before all panels (top of sidebar) | Paragraph Style panel |
 | `typost_inspector_after_font_weight` | After Font Weight panel | Variable font axes panel |
 | `typost_inspector_before_features` | Before OpenType Features panel | Glyphs panel |
 | `typost_inspector_after_features` | After OpenType Features panel | Additional feature panels |

@@ -337,7 +337,13 @@ async function styledBlock(page, detach, change) {
 		await openEditor(page);
 		const [ clientId ] = await insertBlocks(page, [ [ 'typost/block', { content: TEXT } ] ]);
 		await editable(page, clientId).click();
-		await page.getByRole('combobox', { name: 'Paragraph Style' }).selectOption(String(style.id));
+		// The field is a combobox (#453): type the name, then click the row by
+		// its name (ArrowDown can land on the second match). A row's label is
+		// "Name — Font (weight)", so match the name at the start of the label:
+		// a plain name would also match a style whose name contains it.
+		await page.getByRole('combobox', { name: 'Paragraph Style' }).fill(style.name);
+		const escapedName = style.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		await page.getByRole('option', { name: new RegExp('^' + escapedName + ' — ') }).click();
 		let content = await settledContent(page);
 		if (!content.includes(`typost-ps-${style.id}`)) {
 			fail('The style was not applied');

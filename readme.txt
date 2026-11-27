@@ -245,7 +245,7 @@ When you delete a font, you can choose a replacement font. Content that used the
 1. Set the typography of some text in either editor.
 2. Click “Save Current Settings as Style” and give the style a name.
 3. Select other text.
-4. To apply the style in a heading or paragraph, click “Browse styles…” and pick the style. In a Typography Stylist block, pick the style from the Paragraph Style list.
+4. To apply the style in a heading or paragraph, click “Browse styles…” and pick the style. In a Typography Stylist block, type part of the style's name or of its font name in the Paragraph Style field of the Quick Feature Toggles, and pick the style from the list. The Paragraph Style field in the block sidebar applies the style to the whole block.
 
 To style a whole Paragraph or Heading block, open Paragraph Style in the block sidebar and click “Browse styles…”. The style goes into the block’s “Additional CSS class(es)” field as `typost-styled typost-ps-N`. Do not remove those two classes by hand; use “Detach Style” instead.
 

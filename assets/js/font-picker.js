@@ -91,14 +91,20 @@ function buildComboboxProps(config) {
 		value: isEmptyValue(config.value) ? null : String(config.value),
 		// Clearing is an entry in the list, not ComboboxControl's own reset
 		// button. Core renders that button only while the field is NOT
-		// expanded (`allowReset && Boolean(value) && !isExpanded`) and
-		// focusing the field expands it, so the button disappears exactly
-		// when someone reaches for it — leaving no way back to "no font".
-		// An entry is always visible, keyboard-reachable, and reads the same
-		// as the option this control replaced.
+		// expanded (`allowReset && Boolean(value) && !isExpanded`), and typing
+		// or a click expands it, so the button disappears exactly when
+		// someone reaches for it — leaving no way back to "no font". An entry
+		// is always visible, keyboard-reachable, and reads the same as the
+		// option this control replaced.
 		options: [{ label: config.placeholder, value: CLEAR_VALUE }].concat(config.options || []),
 		placeholder: config.placeholder,
 		allowReset: false,
+		// The list opens on typing or a click, not on focus. Open on focus,
+		// NVDA in Firefox read the result count and the highlighted row and
+		// never the field's name (#453, SR-2). The prop is in WordPress 6.6+
+		// (Gutenberg 18.5, WordPress/gutenberg#61705); an older core ignores
+		// it and opens the list on focus, as before.
+		expandOnFocus: false,
 		onChange: function (value) {
 			config.onChange(normalizeFontPickerValue(value));
 		}
@@ -190,6 +196,75 @@ function watchSuggestionsList(root) {
 }
 
 /**
+ * Whether the picker's suggestions list is open and highlights no row.
+ *
+ * Core renders the list (a `ul[role="listbox"]`) while the field is
+ * expanded, also when the typed text matches nothing, and removes it when
+ * the field closes. It marks the highlighted row with
+ * `aria-selected="true"` (form-token-field/suggestions-list, 5.8 and
+ * later). An open list with no such row is either empty or hides the
+ * option that core would pick on Enter.
+ *
+ * @param {Element|null} root Wrapper element around the control.
+ * @return {boolean} True only for an open list with no highlighted option.
+ */
+function hasNoHighlightedRow(root) {
+	if (!root || !root.querySelector) {
+		return false;
+	}
+	var list = root.querySelector(SUGGESTIONS_LIST_SELECTOR);
+	return !!list && !list.querySelector('[role="option"][aria-selected="true"]');
+}
+
+/**
+ * Stop Enter from picking a row the list does not show. Returns a function
+ * that stops the guard.
+ *
+ * Core's ComboboxControl picks its `selectedSuggestion` on Enter, also when
+ * the list no longer shows that row:
+ * - When the typed text matches nothing, every version keeps the row it
+ *   highlighted for the earlier text: type "Bo", then "zzzz", press Enter,
+ *   and Bookmania applies with no row in sight (checked in WordPress 7.1.5).
+ * - In 5.8 a new search never resets the selection, also when other rows
+ *   match: highlight "Body", type "Pull", and Enter applies "Body" while
+ *   only "Pull quote" shows. From 6.4 an effect highlights the first match
+ *   instead (wp/6.4 combobox-control/index.tsx).
+ * While the open list highlights no row, this capture listener on the
+ * wrapper prevents Enter and stops its propagation. Core's key handler
+ * returns early for a prevented event from WordPress 6.4, but in 5.8 it
+ * does not check `defaultPrevented` (wp/5.8 combobox-control/index.js,
+ * `onKeyDown`). Stopping propagation in the capture phase keeps the event
+ * from reaching the React root listener that runs core's handler, so the
+ * guard works on every supported version. Nothing applies, and core does
+ * not say "Item selected.". Enter on a highlighted row, and Enter on a
+ * closed field, work as before.
+ *
+ * @param {Element|null} root Wrapper element around the control.
+ * @return {Function} Cleanup.
+ */
+function guardEnterWithoutMatches(root) {
+	if (!root || !root.addEventListener) {
+		return function () {};
+	}
+	var onKeyDown = function (event) {
+		if (event.key !== 'Enter' || event.isComposing || event.keyCode === 229) {
+			return;
+		}
+		if (!event.target || event.target.tagName !== 'INPUT') {
+			return;
+		}
+		if (hasNoHighlightedRow(root)) {
+			event.preventDefault();
+			event.stopPropagation();
+		}
+	};
+	root.addEventListener('keydown', onKeyDown, true);
+	return function () {
+		root.removeEventListener('keydown', onKeyDown, true);
+	};
+}
+
+/**
  * The font family picker.
  *
  * @param {Object} props See buildComboboxProps().
@@ -206,11 +281,16 @@ function FontPicker(props) {
 	// hooks since WordPress 5.2, below this plugin's floor.
 	var ref = element.useRef(null);
 	element.useEffect(function () {
-		return watchSuggestionsList(ref.current);
+		var stopWatching = watchSuggestionsList(ref.current);
+		var stopGuard = guardEnterWithoutMatches(ref.current);
+		return function () {
+			stopWatching();
+			stopGuard();
+		};
 	}, []);
 
 	if (components.ComboboxControl) {
-		// The wrapper exists for the suggestions-list fix above.
+		// The wrapper exists for the suggestions-list fixes above.
 		return createElement(
 			'div',
 			{ className: 'typost-font-picker', ref: ref },
@@ -227,5 +307,7 @@ module.exports = {
 	buildSelectProps: buildSelectProps,
 	normalizeFontPickerValue: normalizeFontPickerValue,
 	removeSuggestionsListFromTabOrder: removeSuggestionsListFromTabOrder,
-	watchSuggestionsList: watchSuggestionsList
+	watchSuggestionsList: watchSuggestionsList,
+	hasNoHighlightedRow: hasNoHighlightedRow,
+	guardEnterWithoutMatches: guardEnterWithoutMatches
 };

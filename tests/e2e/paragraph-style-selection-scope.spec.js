@@ -255,7 +255,7 @@ test.describe('#303 Paragraph Style panel in Quick Feature Toggles with a text s
 		await expect(sidebarBadge).toHaveText(blockStyle.name);
 	});
 
-	test('Choosing a style in the panel select styles only the selected letter', async ({ page }) => {
+	test('Choosing a style in the panel field styles only the selected letter', async ({ page }) => {
 		await openNewPost(page);
 		const name = `ZZ #303 bold ${Date.now()}`;
 		const style = await page.evaluate((styleName) => wp.apiFetch({
@@ -272,14 +272,60 @@ test.describe('#303 Paragraph Style panel in Quick Feature Toggles with a text s
 		await selectFirstLetter(page, clientId);
 		const modal = await openQuickFeatureToggles(page);
 
-		const select = modal.getByRole('combobox', { name: 'Paragraph Style' });
-		await select.selectOption({ label: await select.locator('option', { hasText: name }).first().textContent() });
+		// The field is a combobox since #453: type to search, then pick with the keyboard
+		const field = modal.getByRole('combobox', { name: 'Paragraph Style' });
+		await field.fill(name);
+		// Core highlights the first match while you type, so Enter picks it.
+		// The name is unique, so there is one match: check that it is the
+		// highlighted row before Enter.
+		await expect(page.locator('.typost-ps-style-picker [role="option"][aria-selected="true"]')).toHaveText(new RegExp('^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' — '));
+		await field.press('Enter');
 		await page.waitForTimeout(1000);
 
 		const after = await readBlock(page, clientId);
 		expect(after.styleClass).toBe('');
 		expect(await styledText(page, clientId, style.id)).toBe('J');
 		expect(await restOfTextWeight(page, clientId)).toBe(weightBefore);
+	});
+
+	test('Enter applies nothing when no style matches the typed text (#453)', async ({ page }) => {
+		await openNewPost(page);
+		const name = `ZZ #453 no match ${Date.now()}`;
+		const style = await page.evaluate((styleName) => wp.apiFetch({
+			path: '/typost/v1/paragraph-styles',
+			method: 'POST',
+			data: { name: styleName, properties: { fontWeight: '700' } },
+		}), name);
+		createdStyleIds.push(style.id);
+		await openNewPost(page);
+
+		const clientId = await insertBlock(page, 'Jumped over the lazy dog');
+		await selectFirstLetter(page, clientId);
+		const modal = await openQuickFeatureToggles(page);
+		const field = modal.getByRole('combobox', { name: 'Paragraph Style' });
+		const rows = page.locator('.typost-ps-style-picker [role="option"]');
+
+		// Typing the name highlights the style
+		await field.fill(name);
+		await expect(page.locator('.typost-ps-style-picker [role="option"][aria-selected="true"]')).toHaveCount(1);
+		// Text that matches nothing empties the list. Core still holds the
+		// style it highlighted, and without the guard Enter applies it.
+		await field.fill('zzzz no style has this name');
+		await expect(page.locator('.typost-ps-style-picker [role="listbox"]')).toHaveCount(1);
+		await expect(rows).toHaveCount(0);
+		await field.press('Enter');
+		await page.waitForTimeout(1000);
+		expect((await readBlock(page, clientId)).content).not.toContain('data-style-id');
+		// The field is still there: no style applied, so no badge replaced it
+		await expect(field).toBeVisible();
+
+		// With a highlighted match in the list, Enter still applies the style.
+		// The guard blocks Enter until core highlights the row, so wait for it.
+		await field.fill(name);
+		await expect(rows).toHaveCount(1);
+		await expect(page.locator('.typost-ps-style-picker [role="option"][aria-selected="true"]')).toHaveCount(1);
+		await field.press('Enter');
+		await expect.poll(() => styledText(page, clientId, style.id)).toBe('J');
 	});
 
 	test('A style saved from one letter captures that letter, not the block', async ({ page }) => {
