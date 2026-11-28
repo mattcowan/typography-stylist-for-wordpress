@@ -2961,8 +2961,12 @@ class Typost {
      * level that finds no new pattern. The page render
      * (render_block_core_block()) has no depth limit, so the search has
      * only a cost ceiling of 20 levels, deeper than real sites nest
-     * patterns. A synced pattern has no view, so it
-     * keeps no cache of its own here. Revisions are not searched. Posts of
+     * patterns. The search runs for an unsynced pattern too: core renders a
+     * "ref" whatever the pattern's sync status, and the status can change
+     * after posts reference the pattern.
+     *
+     * A synced pattern has no view, so it keeps no cache of its own here.
+     * Revisions are not searched. Posts of
      * types without a frontend view (is_font_cache_post_type()), for example
      * templates and template parts, are found but keep no per-post cache: a
      * block theme reads their fonts as they render (#481).
