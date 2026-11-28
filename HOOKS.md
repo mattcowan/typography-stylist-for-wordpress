@@ -593,7 +593,7 @@ window.typostHooks.removeFilter('typost_current_editor_state', myFilter);
 
 **Container lifecycle:** Each hook point renders a `<div class="typost-hook-point" data-hook="...">` and fires its action **once per container mount** — actions do not re-fire on ordinary editor re-renders, so render your UI once and manage its own state from there. The **font-dependent hook points** (`typost_weight_control`, `typost_inline_after_font_controls`, `typost_qft_after_font_controls`, `typost_inspector_after_font_weight`) are keyed to the active font: when the font changes, the old container (and everything you rendered into it) is destroyed, a fresh container mounts, and the action fires again with the new state. Don't cache references to these containers across font changes.
 
-**When a container leaves the page** (*since 2.4.0*): a container leaves the page when its dialog closes, when the block sidebar shows another block, and when a font-dependent hook point gets a new container. For every hook container (the inline editor, the Quick Feature Toggles and the block sidebar), core then unmounts the root that you rendered into the container itself with `wp.element.render()`, so your component's effects clean up (unsubscribe from `wp.data`, clear timers) as they do for any unmount. Core does this a moment after the container leaves, never while it is on the page. When the sidebar goes from one block to another, the new block's containers mount and fire their actions before the old roots are unmounted: do not let a new mount take state from one whose container is no longer connected. Core does not know about a root that you render into an element that you append to the container, or a root that you make with `createRoot()`: unmount it yourself when your element leaves the page (the bundled modules watch `isConnected` with a `MutationObserver`). When the block sidebar shows another block, it also mounts the last block's containers in a panel that is not in the document and fires their actions: unmount a root that you make there too. Before 2.4.0 nothing was unmounted, and each open of a dialog left one more copy of your UI mounted.
+**When a container leaves the page** (*since 2.4.0*): a container leaves the page when its dialog closes, when the block sidebar shows another block, and when a font-dependent hook point gets a new container. For every hook container (the inline editor, the Quick Feature Toggles and the block sidebar), core then unmounts the root that you rendered into the container itself with `wp.element.render()`, so your component's effects clean up (unsubscribe from `wp.data`, clear timers) as they do for any unmount. Core does this a moment after the container leaves, never while it is on the page. When the sidebar goes from one block to another, the new block's containers mount and fire their actions before the old roots are unmounted: do not let a new mount take state from one whose container is no longer connected. Core does not know about a root that you render into an element that you append to the container, or a root that you make with `createRoot()`: unmount it yourself when your element leaves the page (the bundled modules watch `isConnected` with a `MutationObserver`). Make a `createRoot()` root on an element that you append to the container, never on the container itself, as the [React example](#react-wpelement-example) does: other extensions and the bundled modules render into the same container, and two roots on one element conflict (React warns, the first commit of a `createRoot()` root empties the container, and the unmount of a `render()` root in it then throws). The Paragraph Styles and Variable Fonts panels render into an element of their own, which they add to the container as soon as the commit that fired the hook is over, so a `render()` into the container itself at any priority keeps working beside them. When the block sidebar shows another block, it also mounts the last block's containers in a panel that is not in the document and fires their actions: unmount a root that you make there too. Before 2.4.0 nothing was unmounted, and each open of a dialog left one more copy of your UI mounted.
 
 ### Inline Editor Hook Points
 
@@ -1237,20 +1237,30 @@ add_action('typost_editor_assets', function() {
         }, 100);
     }
 
-    // createRoot() where WordPress has it (WordPress 6.2 and later; React 19
-    // has no render()), else render(). Core does not unmount a createRoot()
-    // root: unmount it when the container leaves the page.
+    // Render into an element of your own in the container, not into the
+    // container: other extensions and the bundled modules render into the
+    // same container. createRoot() where WordPress has it (WordPress 6.2 and
+    // later; React 19 has no render()), else render(). Core does not unmount
+    // a root in your element: unmount it when the element leaves the page.
     function renderPanel(containerEl) {
-        if (typeof wp.element.createRoot !== 'function') {
-            wp.element.render(el(MyPanel), containerEl);
-            return;
+        var mount = containerEl.ownerDocument.createElement('div');
+        containerEl.appendChild(mount);
+        var root = null;
+        if (typeof wp.element.createRoot === 'function') {
+            root = wp.element.createRoot(mount);
+            root.render(el(MyPanel));
+        } else {
+            wp.element.render(el(MyPanel), mount);
         }
-        var root = wp.element.createRoot(containerEl);
-        root.render(el(MyPanel));
         var observer = new MutationObserver(function() {
-            if (!containerEl.isConnected) {
-                observer.disconnect();
+            if (mount.isConnected) {
+                return;
+            }
+            observer.disconnect();
+            if (root) {
                 root.unmount();
+            } else {
+                wp.element.unmountComponentAtNode(mount);
             }
         });
         observer.observe(containerEl.ownerDocument.body, { childList: true, subtree: true });

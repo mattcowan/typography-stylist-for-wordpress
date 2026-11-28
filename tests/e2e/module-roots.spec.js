@@ -24,9 +24,20 @@
  * when it leaves. The messages are logged only by React's development build
  * (SCRIPT_DEBUG, which wp-env turns on).
  *
+ * The last tests plant a test extension that renders into the same hook
+ * containers as the Paragraph Styles panel (the block sidebar's top and the
+ * Quick Feature Toggles' top), before the panel's action (priority 5) and
+ * after it (20): once with render() into the container itself, and once as
+ * the React example in HOOKS.md does (createRoot() on an element of its
+ * own). Both panels show, React logs nothing about roots that share an
+ * element, no error reaches the page, and every root is unmounted when its
+ * container leaves.
+ *
  * Each test works on its own draft post and paragraph style ("ZZ #456 …");
  * afterEach deletes them without the test's page.
  */
+const fs = require('fs');
+const path = require('path');
 const { test, expect } = require('@playwright/test');
 const { openNewPost, editable, select, rest, deleteWithoutPage } = require('./helpers');
 
@@ -49,15 +60,18 @@ test.afterEach(async ({ playwright }) => {
 	expect(failures, 'cleanup: delete what the test made').toEqual([]);
 });
 
-// Runs in the page before its scripts (page.addInitScript)
-function pageScript(removeLegacy) {
+// Runs in the page before its scripts (page.addInitScript). removeLegacy:
+// no render() and no unmountComponentAtNode(), as in React 19. ownActions:
+// only this plugin's scripts and the test's own extension add hook actions.
+function pageScript({ removeLegacy, ownActions }) {
 	Error.stackTraceLimit = 80;
-	const record = { roots: [], messages: [], skippedActions: 0 };
+	const record = { roots: [], messages: [], mixing: [], skippedActions: 0 };
 	window.__zz456 = record;
-	const MODULE = /\/(paragraph-styles|variable-fonts|glyphs-panel)\/assets\/js\//;
+	// A module's script, or the test extension's (zz456ext.js)
+	const MODULE = /\/(paragraph-styles|variable-fonts|glyphs-panel)\/assets\/js\/|(zz456ext)\.js/;
 	const moduleOf = (stack) => {
 		const match = MODULE.exec(stack);
-		return match ? match[1] : null;
+		return match ? (match[1] || match[2]) : null;
 	};
 
 	const consoleError = console.error;
@@ -65,6 +79,10 @@ function pageScript(removeLegacy) {
 		const text = args.map(String).join(' ');
 		if (/ReactDOM\.render is no longer supported|unmountComponentAtNode is deprecated|synchronously unmount a root/.test(text)) {
 			record.messages.push({ text: text.slice(0, 100), module: moduleOf(String(new Error().stack)) });
+		}
+		// What React logs when two roots share an element
+		if (/Replacing React-rendered children|previously passed to ReactDOM\.render|already been passed to createRoot|removed without using React|another copy of React/.test(text)) {
+			record.mixing.push(text.slice(0, 160));
 		}
 		return consoleError.apply(this, args);
 	};
@@ -100,9 +118,12 @@ function pageScript(removeLegacy) {
 	}
 
 	// Another extension active on the site may still render with render(),
-	// and its error would stop the dialog: with render() removed, only this
-	// plugin's scripts add hook actions (wp-env has no other extension)
-	if (removeLegacy) {
+	// and its error would stop the dialog when render() is removed; and its
+	// root in a shared hook container would take part in a test of the test
+	// extension. Then only this plugin's scripts, and the test extension
+	// (window.__zz456planting while the test adds it), add hook actions
+	// (wp-env has no other extension).
+	if (ownActions) {
 		const OWN = /\/(paragraph-styles|variable-fonts|glyphs-panel)\/assets\/js\/|\/assets\/js\/block-editor(\.min)?\.js|\/blocks\/typography-stylist\/build\//;
 		let hooks;
 		Object.defineProperty(window, 'typostHooks', {
@@ -114,7 +135,7 @@ function pageScript(removeLegacy) {
 				if (hooks && typeof hooks.addAction === 'function' && !hooks.addAction.zz456) {
 					const addAction = hooks.addAction;
 					hooks.addAction = function() {
-						if (!OWN.test(String(new Error().stack))) {
+						if (!window.__zz456planting && !OWN.test(String(new Error().stack))) {
 							record.skippedActions++;
 							return undefined;
 						}
@@ -158,11 +179,14 @@ function recorded(page) {
 			return {
 				module: entry.module,
 				where: hook ? hook.getAttribute('data-hook') : entry.container.className,
+				// Made on a hook container itself, not on an element in it
+				onHookContainer: entry.container.hasAttribute('data-hook'),
 				connected: entry.container.isConnected,
 				unmounted: entry.unmounted,
 			};
 		}),
 		messages: window.__zz456.messages,
+		mixing: window.__zz456.mixing,
 		skippedActions: window.__zz456.skippedActions,
 	}));
 }
@@ -324,7 +348,7 @@ function expectRootsReleased(roots, modules) {
 test('With no render() and no unmountComponentAtNode() (React 19), the modules show their panels and the Glyphs button, and unmount them', async ({ page }) => {
 	const errors = [];
 	page.on('pageerror', (error) => errors.push(error.message));
-	await page.addInitScript(pageScript, true);
+	await page.addInitScript(pageScript, { removeLegacy: true, ownActions: true });
 	const style = await createStyle(page, 'react 19');
 	await openDraft(page);
 	expect(await page.evaluate(() => [ typeof wp.element.render, typeof wp.element.unmountComponentAtNode, typeof wp.element.createRoot ]))
@@ -355,7 +379,7 @@ test('With no render() and no unmountComponentAtNode() (React 19), the modules s
 });
 
 test('With React 18, the modules render with createRoot() and the development build logs no render() deprecation from them', async ({ page }) => {
-	await page.addInitScript(pageScript, false);
+	await page.addInitScript(pageScript, { removeLegacy: false, ownActions: false });
 	const style = await createStyle(page, 'react 18');
 	await openDraft(page);
 	test.skip(await page.evaluate(() => typeof wp.element.createRoot !== 'function'), 'This WordPress has no createRoot() (before 6.2)');
@@ -366,3 +390,123 @@ test('With React 18, the modules render with createRoot() and the development bu
 	expectRootsReleased(roots, [ 'paragraph-styles', 'glyphs-panel' ]);
 	expect(messages.filter((message) => message.module), 'React messages caused by a module').toEqual([]);
 });
+
+// The hook containers the test extension renders into
+const SHARED_HOOKS = [ 'typost_inspector_top', 'typost_qft_modal_top' ];
+
+// Runs in the page: an extension that renders into each shared container
+// itself with render(), and counts its mounts and unmounts
+function plantRenderExtension({ hooks, priority }) {
+	const el = wp.element.createElement;
+	const counts = { mounts: 0, unmounts: 0 };
+	window.__zz456ext = counts;
+	function Extension() {
+		wp.element.useEffect(() => {
+			counts.mounts++;
+			return () => {
+				counts.unmounts++;
+			};
+		}, []);
+		return el('p', { className: 'zz-456-ext' }, 'ZZ 456 extension');
+	}
+	hooks.forEach((hook) => {
+		window.typostHooks.addAction(hook, (container) => {
+			wp.element.render(el(Extension), container);
+		}, priority);
+	});
+}
+
+// The React example in HOOKS.md, with its actions on the shared containers
+// at a priority. Run as zz456ext.js, so its roots are recorded.
+function hooksExample(priority) {
+	const source = fs.readFileSync(path.join(__dirname, '..', '..', 'HOOKS.md'), 'utf8');
+	const blocks = source.split('```javascript\n').slice(1).map((block) => block.split('```')[0])
+		.filter((block) => /^\/\/ editor\.js\n/.test(block) && /function renderPanel\(containerEl\)/.test(block));
+	expect(blocks, 'the React example in HOOKS.md').toHaveLength(1);
+	const registration = /\n\s*window\.typostHooks\.addAction\('typost_inline_modal_top', renderPanel, 10\);\n\s*window\.typostHooks\.addAction\('typost_qft_modal_top', renderPanel, 10\);\n/;
+	expect(blocks[0], 'the example\'s two actions').toMatch(registration);
+	const actions = SHARED_HOOKS.map((hook) => `window.typostHooks.addAction('${hook}', renderPanel, ${priority});`).join('\n');
+	return blocks[0].replace(registration, `\n${actions}\n`) + '\n//# sourceURL=zz456ext.js\n';
+}
+
+// The test extension's content in a container
+function extensionIn(container, extension) {
+	return extension === 'render'
+		? container.locator('.zz-456-ext')
+		: container.getByText('My Extension is active!');
+}
+
+for (const extension of [ 'render', 'createRoot' ]) {
+	for (const priority of [ 5, 20 ]) {
+		const name = extension === 'render' ? 'render() into the container' : 'the HOOKS.md example (createRoot() on its own element)';
+		test(`An extension that renders with ${name} at priority ${priority} and the Paragraph Styles panel both show, without conflict, and unmount`, async ({ page }) => {
+			const errors = [];
+			page.on('pageerror', (error) => errors.push(error.message));
+			await page.addInitScript(pageScript, { removeLegacy: false, ownActions: true });
+			const style = await createStyle(page, `shared ${extension} ${priority}`);
+			await openDraft(page);
+			const usesCreateRoot = await page.evaluate(() => typeof wp.element.createRoot === 'function');
+			test.skip(!usesCreateRoot, 'This WordPress has no createRoot() (before 6.2)');
+
+			// The page script lets the test extension add its actions
+			await page.evaluate(() => {
+				window.__zz456planting = true;
+			});
+			if (extension === 'render') {
+				await page.evaluate(plantRenderExtension, { hooks: SHARED_HOOKS, priority });
+			} else {
+				// eslint-disable-next-line no-eval
+				await page.evaluate((code) => (0, eval)(code), hooksExample(priority));
+			}
+			const { skippedActions } = await page.evaluate(() => {
+				window.__zz456planting = false;
+				return window.__zz456;
+			});
+			if (skippedActions) {
+				test.info().annotations.push({ type: 'other extensions', description: `${skippedActions} hook actions of other scripts left out` });
+			}
+
+			// The block sidebar
+			const block = await insertBlock(page, 'typost/block', { content: styledContent(style.id), styleClass: `typost-ps-${style.id}`, fontWeight: '700' });
+			await showInSidebar(page, block);
+			const sidebarTop = page.locator('[data-hook="typost_inspector_top"]');
+			await expect(sidebarTop.locator('.typost-ps-badge-name')).toHaveText(style.name);
+			await expect(extensionIn(sidebarTop, extension)).toHaveCount(1);
+
+			// The Quick Feature Toggles
+			await select(page, block, ...GARDEN);
+			const button = page.getByRole('button', { name: 'Typography Stylist Features' });
+			if (!(await button.isVisible())) {
+				await page.keyboard.press('Alt+F10');
+			}
+			await button.click();
+			const modal = page.locator('.typost-block-modal');
+			const modalTop = modal.locator('[data-hook="typost_qft_modal_top"]');
+			await expect(modalTop.locator('.typost-ps-badge-name')).toHaveText(style.name);
+			await expect(extensionIn(modalTop, extension)).toHaveCount(1);
+			// Both stay: nothing empties the container after the first look
+			await page.waitForTimeout(500);
+			await expect(modalTop.locator('.typost-ps-panel')).toHaveCount(1);
+			await expect(extensionIn(modalTop, extension)).toHaveCount(1);
+			await closeDialog(page, modal);
+
+			// The sidebar shows another block
+			const other = await insertBlock(page, 'core/paragraph', { content: 'Another block' });
+			await showInSidebar(page, other);
+			await expect(sidebarTop).toHaveCount(0);
+			await page.waitForTimeout(300);
+
+			const { roots, mixing } = await recorded(page);
+			expectRootsReleased(roots, extension === 'render' ? [ 'paragraph-styles' ] : [ 'paragraph-styles', 'zz456ext' ]);
+			if (extension === 'render') {
+				const counts = await page.evaluate(() => window.__zz456ext);
+				expect(counts.mounts, 'the extension mounted in the sidebar and the dialog').toBeGreaterThanOrEqual(2);
+				expect(counts.unmounts, 'every mount of the extension unmounted').toBe(counts.mounts);
+			}
+			// The roots of the panel and the extension never share an element
+			expect(roots.filter((root) => root.onHookContainer), 'a root made on a hook container itself').toEqual([]);
+			expect(mixing, 'React messages about roots that share an element').toEqual([]);
+			expect(errors).toEqual([]);
+		});
+	}
+}

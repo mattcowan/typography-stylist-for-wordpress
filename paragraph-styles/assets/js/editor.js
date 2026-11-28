@@ -1830,9 +1830,10 @@
 	 * A container that is not on the page when its hook fires is a render
 	 * the editor never shows: when the block sidebar shows another block, it
 	 * mounts the last block's controls once more in a panel that is not in
-	 * the document. Its root is unmounted as soon as that commit is over.
+	 * the document. Its root is unmounted as soon as that commit is over,
+	 * unless the container is on the page by then.
 	 *
-	 * Call it from the hook's action, after renderIntoRoot().
+	 * Call it after renderIntoRoot().
 	 *
 	 * @param {Element} container Element a root was rendered into
 	 */
@@ -1845,7 +1846,25 @@
 		}
 		watchedContainers.push(container);
 		if (!container.isConnected) {
-			Promise.resolve().then(releaseDetachedRoots);
+			Promise.resolve().then(function() {
+				// A container that is on the page now is watched like any
+				// other: observe its document before the detached ones go
+				watchedContainers.forEach(observeContainerDocument);
+				releaseDetachedRoots();
+			});
+			return;
+		}
+		observeContainerDocument(container);
+	}
+
+	/**
+	 * Observe the document of a watched container that is on the page, so
+	 * that releaseDetachedRoots() runs when the container leaves it.
+	 *
+	 * @param {Element} container Watched container
+	 */
+	function observeContainerDocument(container) {
+		if (!container.isConnected) {
 			return;
 		}
 		if (!containerObserver) {
@@ -1856,6 +1875,54 @@
 			observedDocuments.push(doc);
 			containerObserver.observe(doc.body, { childList: true, subtree: true });
 		}
+	}
+
+	// This script's element in each hook container it renders into
+	var hookContainerMounts = new WeakMap();
+
+	/**
+	 * Render an element into this script's own element in a hook container,
+	 * and unmount its root when that element leaves the page.
+	 *
+	 * The root is never made on the hook container itself: another
+	 * extension can render into the same container, with render() or with
+	 * createRoot(), and two roots on one element conflict. React warns, the
+	 * first commit of a createRoot() root empties the container, and core's
+	 * unmount of a render() root then throws.
+	 *
+	 * The element goes into the container as soon as the commit that fired
+	 * the hook is over, after the hook's other actions: the first render()
+	 * into a container empties it, so an element added before an extension
+	 * that renders later would leave the page at once. The first render
+	 * goes into the element before that.
+	 *
+	 * A later call for the same container renders into the same root. If
+	 * something emptied the container since, a new element goes in; the old
+	 * element's root was unmounted when the element left the page.
+	 *
+	 * @param {Object}  element   React element
+	 * @param {Element} container Hook container
+	 * @param {string}  className Class of this script's element
+	 */
+	function renderIntoHookContainer(element, container, className) {
+		var entry = hookContainerMounts.get(container);
+		if (entry && (!entry.added || entry.mount.parentNode === container)) {
+			renderIntoRoot(element, entry.mount);
+			if (entry.added) {
+				watchRootContainer(entry.mount);
+			}
+			return;
+		}
+		var mount = container.ownerDocument.createElement('div');
+		mount.className = className;
+		var created = { mount: mount, added: false };
+		hookContainerMounts.set(container, created);
+		renderIntoRoot(element, mount);
+		Promise.resolve().then(function() {
+			created.added = true;
+			container.appendChild(mount);
+			watchRootContainer(mount);
+		});
 	}
 
 	// -------------------------------------------------------------------------
@@ -2612,17 +2679,19 @@
 	// Hook into both editors
 	// -------------------------------------------------------------------------
 
+	// The panel's root is in an element of its own in the hook container,
+	// so other extensions can render into the container too
 	function renderPanel(containerEl, editorSource, hostState) {
 		injectStyles();
-		renderIntoRoot(
+		renderIntoHookContainer(
 			el(ParagraphStylesPanel, { editorSource: editorSource, hostState: hostState || null }),
-			containerEl
+			containerEl,
+			'typost-ps-root'
 		);
-		watchRootContainer(containerEl);
 	}
 
 	// The typost_inline_modal_top container the panel was rendered into
-	// last: typost_inline_modal_opened renders into its root again
+	// last: typost_inline_modal_opened renders into the same root again
 	var inlineTopContainer = null;
 
 	// Wait for typostHooks to be available

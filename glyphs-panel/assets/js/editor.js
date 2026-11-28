@@ -156,9 +156,10 @@
 	 * A container that is not on the page when its hook fires is a render
 	 * the editor never shows: when the block sidebar shows another block, it
 	 * mounts the last block's controls once more in a panel that is not in
-	 * the document. Its root is unmounted as soon as that commit is over.
+	 * the document. Its root is unmounted as soon as that commit is over,
+	 * unless the container is on the page by then.
 	 *
-	 * Call it from the hook's action, after renderIntoRoot().
+	 * Call it after renderIntoRoot().
 	 *
 	 * @param {Element} container Element a root was rendered into
 	 */
@@ -171,7 +172,25 @@
 		}
 		watchedContainers.push(container);
 		if (!container.isConnected) {
-			Promise.resolve().then(releaseDetachedRoots);
+			Promise.resolve().then(function() {
+				// A container that is on the page now is watched like any
+				// other: observe its document before the detached ones go
+				watchedContainers.forEach(observeContainerDocument);
+				releaseDetachedRoots();
+			});
+			return;
+		}
+		observeContainerDocument(container);
+	}
+
+	/**
+	 * Observe the document of a watched container that is on the page, so
+	 * that releaseDetachedRoots() runs when the container leaves it.
+	 *
+	 * @param {Element} container Watched container
+	 */
+	function observeContainerDocument(container) {
+		if (!container.isConnected) {
 			return;
 		}
 		if (!containerObserver) {

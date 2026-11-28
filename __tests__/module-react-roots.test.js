@@ -8,18 +8,27 @@
  * a module uses only core's public extension API:
  * - renderIntoRoot() and unmountRoot(): one createRoot() root for each
  *   container, else render() and unmountComponentAtNode();
- * - watchRootContainer() and releaseDetachedRoots(): core unmounts only a
- *   render() root in a hook container itself (#419), so a module unmounts
- *   its createRoot() roots when their container leaves the page.
+ * - watchRootContainer(), observeContainerDocument() and
+ *   releaseDetachedRoots(): core unmounts only a render() root in a hook
+ *   container itself (#419), so a module unmounts its createRoot() roots
+ *   when their container leaves the page;
+ * - renderIntoHookContainer() (Paragraph Styles and Variable Fonts): the
+ *   root goes in an element of the module's own in the hook container,
+ *   never on the container, which other extensions render into too.
  *
  * "The copies" checks that every copy does the same (docs/twins.md). The
  * other tests load each module's whole script with the real React, in two
  * shapes of wp.element: React 19's (createRoot(), no render() and no
  * unmountComponentAtNode()) and React 17's (render(), no createRoot()). In
  * each, the panels and the Glyphs button show, and unmount when their
- * container leaves the page or their dialog closes.
+ * container leaves the page or their dialog closes. The last tests use
+ * React 18's shape (all three) with an extension that renders into the
+ * same hook container: with render(), and as the React example in HOOKS.md
+ * does.
  */
 
+const fs = require('fs');
+const path = require('path');
 const React = require('react');
 const ReactDOM = require('react-dom');
 const ReactDOMClient = require('react-dom/client');
@@ -34,6 +43,9 @@ const MODULE_SCRIPTS = {
 };
 // The scripts that render into hook containers, and so watch them
 const WATCHING = [ 'paragraph-styles', 'variable-fonts', 'glyphs-panel' ];
+// The scripts that render into their own element in a hook container with
+// renderIntoHookContainer() (the Glyphs button appends its own)
+const HOOK_RENDERING = [ 'paragraph-styles', 'variable-fonts' ];
 
 // Mutation records reach an observer in a microtask
 const afterMutations = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -57,20 +69,28 @@ describe('the copies', () => {
 	function loadCopy(file, element) {
 		const names = [ 'renderIntoRoot', 'unmountRoot' ];
 		const watching = WATCHING.some((key) => MODULE_SCRIPTS[key] === file);
+		const hookRendering = HOOK_RENDERING.some((key) => MODULE_SCRIPTS[key] === file);
 		if (watching) {
-			names.push('releaseDetachedRoots', 'watchRootContainer');
+			names.push('releaseDetachedRoots', 'watchRootContainer', 'observeContainerDocument');
+		}
+		if (hookRendering) {
+			names.push('renderIntoHookContainer');
 		}
 		const code = names.map((name) => extractFunction(file, name)).join('\n');
 		return new Function('window', 'wp',
-			'var elementRoots = new WeakMap(); var watchedContainers = []; var containerObserver = null; var observedDocuments = [];\n' + code +
+			'var elementRoots = new WeakMap(); var watchedContainers = []; var containerObserver = null; var observedDocuments = [];' +
+			' var hookContainerMounts = new WeakMap();\n' + code +
 			'\nreturn { renderIntoRoot: renderIntoRoot, unmountRoot: unmountRoot,' +
-			(watching ? ' watchRootContainer: watchRootContainer, watched: function() { return watchedContainers.length; },' : '') +
+			(watching ? ' watchRootContainer: watchRootContainer, watched: function() { return watchedContainers.length; },' +
+				' observing: function() { return containerObserver !== null; },' : '') +
+			(hookRendering ? ' renderIntoHookContainer: renderIntoHookContainer,' : '') +
 			' };')(window, { element });
 	}
 
-	// What each wp.element call received, by container name
+	// What each wp.element call received, by container name (a module's
+	// own element in a hook container: its class)
 	function recordingElement(shape, log) {
-		const name = (container) => container.getAttribute('data-name');
+		const name = (container) => container.getAttribute('data-name') || container.className;
 		const element = {};
 		if (shape.createRoot) {
 			element.createRoot = (container) => {
@@ -186,6 +206,72 @@ describe('the copies', () => {
 		expect(unmounts()).toEqual([ [ 'root.unmount', 'off' ], [ 'root.unmount', 'leaves' ], [ 'root.unmount', 'stays' ] ]);
 		expect(copy.watched()).toBe(0);
 	});
+
+	test.each(WATCHING.map((key) => MODULE_SCRIPTS[key]))('%s watches a container that is off the page when its hook fires but on it once the commit is over, and unmounts it when it leaves', async (file) => {
+		const log = [];
+		const copy = loadCopy(file, recordingElement({ createRoot: true }, log));
+		const late = named('late');
+		copy.renderIntoRoot('panel', late);
+		copy.watchRootContainer(late);
+		document.body.appendChild(late);
+		await Promise.resolve();
+		const unmounts = () => log.filter((entry) => entry[0] === 'root.unmount');
+		expect(unmounts()).toEqual([]);
+		expect(copy.watched()).toBe(1);
+		expect(copy.observing()).toBe(true);
+
+		late.remove();
+		await afterMutations();
+		expect(unmounts()).toEqual([ [ 'root.unmount', 'late' ] ]);
+		expect(copy.watched()).toBe(0);
+		expect(copy.observing()).toBe(false);
+	});
+
+	// Render into a hook container twice, have an extension empty it, render
+	// again, and close its dialog
+	async function hookContainerTrace(file) {
+		const log = [];
+		const copy = loadCopy(file, recordingElement({ createRoot: true, render: true, unmount: true }, log));
+		const dialog = document.createElement('div');
+		const container = named('hook');
+		dialog.appendChild(container);
+		document.body.appendChild(dialog);
+		const children = () => Array.from(container.children).map((child) => child.className);
+
+		copy.renderIntoHookContainer('first', container, 'zz-mine');
+		copy.renderIntoHookContainer('second', container, 'zz-mine');
+		// The element goes in once the hook's other actions have run
+		log.push([ 'children', children() ]);
+		await Promise.resolve();
+		log.push([ 'children', children() ]);
+		copy.renderIntoHookContainer('third', container, 'zz-mine');
+
+		// An extension's first render() empties the container
+		container.textContent = '';
+		await afterMutations();
+		copy.renderIntoHookContainer('fourth', container, 'zz-mine');
+		await Promise.resolve();
+		log.push([ 'children', children() ]);
+
+		dialog.remove();
+		await afterMutations();
+		return log;
+	}
+
+	test.each(HOOK_RENDERING.map((key) => MODULE_SCRIPTS[key]))('%s renders into one element of its own in a hook container, never into the container', async (file) => {
+		expect(await hookContainerTrace(file)).toEqual([
+			[ 'createRoot', 'zz-mine' ], [ 'root.render', 'zz-mine', 'first' ], [ 'root.render', 'zz-mine', 'second' ],
+			[ 'children', [] ],
+			[ 'children', [ 'zz-mine' ] ],
+			[ 'root.render', 'zz-mine', 'third' ],
+			// Its element left the page: its root is unmounted, and the next
+			// render gets a new element
+			[ 'root.unmount', 'zz-mine' ],
+			[ 'createRoot', 'zz-mine' ], [ 'root.render', 'zz-mine', 'fourth' ],
+			[ 'children', [ 'zz-mine' ] ],
+			[ 'root.unmount', 'zz-mine' ],
+		]);
+	});
 });
 
 // ---------------------------------------------------------------------------
@@ -193,8 +279,8 @@ describe('the copies', () => {
 // ---------------------------------------------------------------------------
 
 // wp.element as WordPress has it with React 19 (no render() and no
-// unmountComponentAtNode()) or React 17 (no createRoot()). Every createRoot()
-// root is recorded.
+// unmountComponentAtNode()), React 18 (all three) or React 17 (no
+// createRoot()). Every createRoot() root is recorded.
 function wpElement(shape, roots) {
 	const element = {
 		createElement: React.createElement,
@@ -207,7 +293,7 @@ function wpElement(shape, roots) {
 		useMemo: React.useMemo,
 		createPortal: ReactDOM.createPortal,
 	};
-	if (shape === 'React 19') {
+	if (shape === 'React 19' || shape === 'React 18') {
 		element.createRoot = (container) => {
 			const root = ReactDOMClient.createRoot(container);
 			const entry = { container, unmounted: false };
@@ -220,6 +306,8 @@ function wpElement(shape, roots) {
 				},
 			};
 		};
+	}
+	if (shape === 'React 19') {
 		element.render = undefined;
 		element.unmountComponentAtNode = undefined;
 	} else {
@@ -388,8 +476,10 @@ describe.each([ 'React 19', 'React 17' ])('with the wp.element of %s', (shape) =
 			window.typostHooks.doAction('typost_qft_modal_top', qft, {});
 			window.typostHooks.doAction('typost_inspector_top', inspector, {});
 		});
+		// In an element of its own in each container, not in the container
 		[ inline, qft, inspector ].forEach((container) => {
-			expect(container.querySelector('.typost-ps-panel')).not.toBeNull();
+			expect(Array.from(container.children).map((child) => child.className)).toEqual([ 'typost-ps-root' ]);
+			expect(container.querySelector('.typost-ps-root > .typost-ps-panel')).not.toBeNull();
 		});
 
 		// The dialog opened: the panel renders into the root it has, and does
@@ -401,8 +491,9 @@ describe.each([ 'React 19', 'React 17' ])('with the wp.element of %s', (shape) =
 		expect(querySelector.mock.calls.filter((call) => /typost_inline_modal_top/.test(call[0]))).toEqual([]);
 		querySelector.mockRestore();
 		expect(inline.querySelectorAll('.typost-ps-panel')).toHaveLength(1);
+		expect(inline.children).toHaveLength(1);
 		if (shape === 'React 19') {
-			expect(roots.map((root) => root.container)).toEqual([ inline, qft, inspector ]);
+			expect(roots.map((root) => root.container.parentNode)).toEqual([ inline, qft, inspector ]);
 		}
 
 		stateCalls = 0;
@@ -470,8 +561,12 @@ describe.each([ 'React 19', 'React 17' ])('with the wp.element of %s', (shape) =
 		expect(weight.querySelector('.typost-vf-axes-panel')).not.toBeNull();
 		expect(axes.querySelector('.typost-vf-other-axes .typost-vf-axes-panel')).not.toBeNull();
 		expect(lifecycle.RangeControl).toEqual({ mounted: 2, unmounted: 0 });
+		// In an element of its own in each container, not in the container
+		[ weight, axes ].forEach((container) => {
+			expect(Array.from(container.children).map((child) => child.className)).toEqual([ 'typost-vf-root' ]);
+		});
 		if (shape === 'React 19') {
-			expect(roots.map((root) => root.container)).toEqual([ weight, axes ]);
+			expect(roots.map((root) => root.container.parentNode)).toEqual([ weight, axes ]);
 		}
 
 		// Core removes the containers; the module unmounts its roots (in the
@@ -498,7 +593,7 @@ describe.each([ 'React 19', 'React 17' ])('with the wp.element of %s', (shape) =
 			await afterMutations();
 		});
 		expect(lifecycle.RangeControl.mounted).toBe(lifecycle.RangeControl.unmounted);
-		expect(detached.childNodes).toHaveLength(0);
+		expect(detached.querySelector('.typost-vf-root').childNodes).toHaveLength(0);
 		if (shape === 'React 19') {
 			expect(roots.map((root) => root.unmounted)).toEqual([ true, true, true ]);
 			expect(reactErrors()).toEqual([]);
@@ -592,5 +687,106 @@ describe.each([ 'React 19', 'React 17' ])('with the wp.element of %s', (shape) =
 			expect(roots[0].unmounted).toBe(true);
 			expect(reactErrors()).toEqual([]);
 		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Another extension in the same hook container
+// ---------------------------------------------------------------------------
+
+describe('with the wp.element of React 18 and an extension that renders into the same hook container', () => {
+	const { unmountHookContainer } = require('../assets/js/hook-container.js');
+	// What React logs when two roots share an element, and the error core's
+	// unmount then threw (#456 review)
+	const MIXING = /Replacing React-rendered children|previously passed to ReactDOM\.render|already been passed to createRoot|removed without using React|another copy of React|not a child/;
+
+	// The React example in HOOKS.md, as an extension author copies it
+	function hooksExample() {
+		const source = fs.readFileSync(path.join(__dirname, '..', 'HOOKS.md'), 'utf8');
+		const blocks = source.split('```javascript\n').slice(1).map((block) => block.split('```')[0]);
+		const example = blocks.filter((block) => /^\/\/ editor\.js\n/.test(block) && /function renderPanel\(containerEl\)/.test(block));
+		expect(example).toHaveLength(1);
+		return example[0];
+	}
+
+	const CASES = [
+		[ 'render() into the container', 'before' ],
+		[ 'render() into the container', 'after' ],
+		[ 'the HOOKS.md example', 'before' ],
+		[ 'the HOOKS.md example', 'after' ],
+	];
+
+	test.each(CASES)('%s, its action %s the Paragraph Styles panel\'s: both show, nothing conflicts, and both unmount when the dialog closes', async (extension, order) => {
+		const { roots, data } = setUp('React 18');
+		window.typostData = { paragraphStyles: [ { id: 3, name: 'Display', properties: { fontWeight: '700' } } ] };
+		window.typostPSUtils = require('../paragraph-styles/assets/js/lib/ps-utils.js');
+		window.typostHooks.addFilter('typost_current_editor_state', (state) => ({ ...state, paragraphStyleId: 3 }));
+		const ext = { mounted: 0, unmounted: 0 };
+		function Ext() {
+			React.useEffect(() => {
+				ext.mounted++;
+				return () => {
+					ext.unmounted++;
+				};
+			}, []);
+			return React.createElement('p', { className: 'zz-ext-panel' }, 'EXT');
+		}
+		function addExtension() {
+			if (extension === 'the HOOKS.md example') {
+				// eslint-disable-next-line no-new-func
+				new Function(hooksExample())();
+				return;
+			}
+			window.typostHooks.addAction('typost_qft_modal_top', (container) => {
+				window.wp.element.render(React.createElement(Ext), container);
+			});
+		}
+		// The registry runs actions in the order they were added
+		if (order === 'before') {
+			addExtension();
+		}
+		loadScript(MODULE_SCRIPTS['paragraph-styles']);
+		if (order === 'after') {
+			addExtension();
+		}
+
+		const container = hookContainer('typost_qft_modal_top');
+		await act(async () => {
+			window.typostHooks.doAction('typost_qft_modal_top', container, {});
+		});
+		expect(container.querySelectorAll('.typost-ps-panel')).toHaveLength(1);
+		if (extension === 'the HOOKS.md example') {
+			expect(container.textContent).toContain('My Extension is active!');
+			expect(roots).toHaveLength(2);
+			expect(roots.map((root) => root.container.parentNode)).toEqual([ container, container ]);
+		} else {
+			expect(container.querySelectorAll('.zz-ext-panel')).toHaveLength(1);
+			expect(ext).toEqual({ mounted: 1, unmounted: 0 });
+			expect(roots).toHaveLength(1);
+		}
+		expect(roots.every((root) => root.container !== container)).toBe(true);
+		expect(data.subscribers.size).toBeGreaterThan(0);
+
+		// The dialog closes: core unmounts a render() root in the container
+		// after the commit (#419), each module and the example their own
+		const thrown = [];
+		await act(async () => {
+			container.parentNode.remove();
+			queueMicrotask(() => {
+				try {
+					unmountHookContainer(container);
+				} catch (error) {
+					thrown.push(error.message);
+				}
+			});
+			await afterMutations();
+		});
+		expect(thrown).toEqual([]);
+		expect(roots.map((root) => root.unmounted)).toEqual(roots.map(() => true));
+		if (extension !== 'the HOOKS.md example') {
+			expect(ext).toEqual({ mounted: 1, unmounted: 1 });
+		}
+		expect(data.subscribers.size).toBe(0);
+		expect(reactErrors().filter((message) => MIXING.test(message))).toEqual([]);
 	});
 });

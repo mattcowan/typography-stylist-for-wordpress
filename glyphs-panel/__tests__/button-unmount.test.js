@@ -17,7 +17,7 @@ const { extractFunction } = require('../../tests/js/twin-source.js');
 const FILE = 'glyphs-panel/assets/js/editor.js';
 
 function load(wp) {
-	const code = [ 'renderIntoRoot', 'unmountRoot', 'releaseDetachedRoots', 'watchRootContainer' ].map((name) => extractFunction(FILE, name)).join('\n');
+	const code = [ 'renderIntoRoot', 'unmountRoot', 'releaseDetachedRoots', 'watchRootContainer', 'observeContainerDocument' ].map((name) => extractFunction(FILE, name)).join('\n');
 	return new Function('window', 'wp',
 		'var elementRoots = new WeakMap(); var watchedContainers = []; var containerObserver = null; var observedDocuments = [];\n' + code +
 		'\nreturn { renderIntoRoot: renderIntoRoot, watchRootContainer: watchRootContainer, mounts: function() { return watchedContainers; },' +
@@ -103,6 +103,26 @@ test('a button that is not on the page when it renders (a render the editor neve
 	expect(wp.element.unmountComponentAtNode).not.toHaveBeenCalled();
 	await Promise.resolve();
 	expect(wp.element.unmountComponentAtNode.mock.calls).toEqual([ [ detached ] ]);
+	expect(glyphs.mounts()).toEqual([]);
+	expect(glyphs.observing()).toBe(false);
+});
+
+test('a button that is off the page when it renders but on it once the commit is over is watched, and unmounted when it leaves', async () => {
+	const wp = { element: { unmountComponentAtNode: jest.fn(() => true) } };
+	const glyphs = load(wp);
+	const container = document.createElement('div');
+	const mount = buttonIn(container);
+	glyphs.watchRootContainer(mount);
+	// On the page before the check
+	document.body.append(container);
+	await Promise.resolve();
+	expect(wp.element.unmountComponentAtNode).not.toHaveBeenCalled();
+	expect(glyphs.mounts()).toEqual([ mount ]);
+	expect(glyphs.observing()).toBe(true);
+
+	container.remove();
+	await afterMutations();
+	expect(wp.element.unmountComponentAtNode.mock.calls).toEqual([ [ mount ] ]);
 	expect(glyphs.mounts()).toEqual([]);
 	expect(glyphs.observing()).toBe(false);
 });

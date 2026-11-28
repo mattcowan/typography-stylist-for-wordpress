@@ -269,8 +269,18 @@ show, and every module root whose container left the page is unmounted
 extensions on the site add are left out in that test, because they can
 still call `render()`. The second test expects no "ReactDOM.render is no
 longer supported" message caused by a module; React logs it only with
-`SCRIPT_DEBUG` on (wp-env has it on). Each test works on its own draft and
-paragraph style ("ZZ #456 …"). It runs in Chromium only.
+`SCRIPT_DEBUG` on (wp-env has it on). The last four tests add a test
+extension to the block sidebar's top and the Quick Feature Toggles' top,
+the containers of the Paragraph Styles panel, before the panel's action
+(priority 5) and after it (20): once with `render()` into the container
+itself, and once as the React example in `HOOKS.md` does (read from that
+file). The panel and the extension both show, React logs nothing about two
+roots on one element, no error reaches the page, and every root is
+unmounted when its container leaves. Those tests leave out the hook
+actions of other extensions on the site too: one of them renders into the
+sidebar's container, and a later `render()` there would empty it. Each
+test works on its own draft and paragraph style ("ZZ #456 …"). It runs in
+Chromium only.
 
 ### `helpers.js`
 
