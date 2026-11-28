@@ -48,6 +48,21 @@ describe('referencesFromHtml', () => {
 		expect(referencesFromHtml(html).fontIds).toEqual([12, 40]);
 	});
 
+	describe('--font-N only as a whole custom property name (#485, shared fixture with the PHP scans)', () => {
+		const fixture = require('../../../tests/fixtures/font-variable-refs.json');
+
+		test('control: the fixture has cases that match and cases that do not', () => {
+			expect(fixture.cases.some((c) => c.ids.length > 0)).toBe(true);
+			expect(fixture.cases.some((c) => c.ids.length === 0)).toBe(true);
+		});
+
+		fixture.cases.forEach((c) => {
+			test(c.label, () => {
+				expect(referencesFromHtml(c.markup).fontIds).toEqual(c.ids);
+			});
+		});
+	});
+
 	test('accepts escaped quotes from serialized attributes', () => {
 		expect(referencesFromHtml('data-font-id=\\"33\\"').fontIds).toEqual([33]);
 	});
