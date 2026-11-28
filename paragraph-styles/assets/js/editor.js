@@ -692,9 +692,10 @@
 			// The used control is still there (Update Style waits for its
 			// request): try again on the next render
 			if (root.contains(doc.activeElement)) return;
-			// One action can render several times (this legacy root renders
-			// each state change in a promise callback on its own), and an
-			// in-between view may not be the last one: act once they are done
+			// One action can render several times (a legacy root, before
+			// WordPress 6.2, renders each state change in a promise callback
+			// on its own), and an in-between view may not be the last one:
+			// act once they are done
 			clearTimeout(refocusTimerRef.current);
 			refocusTimerRef.current = setTimeout(function() {
 				// While a save request runs, its view is not the last one:
@@ -1727,6 +1728,204 @@
 	}
 
 	// -------------------------------------------------------------------------
+	// React roots (#456). The same helpers are in each bundled module's
+	// scripts; docs/twins.md lists the copies.
+	// -------------------------------------------------------------------------
+
+	// The createRoot() root of each container this script renders into
+	var elementRoots = new WeakMap();
+
+	/**
+	 * Render an element into a container. With createRoot() where WordPress
+	 * has it (React 18, WordPress 6.2 and later): one root for each
+	 * container, which each later call renders into again. Else with
+	 * render() (React 17). React 19 has no render().
+	 *
+	 * @param {Object}  element   React element
+	 * @param {Element} container Container element
+	 */
+	function renderIntoRoot(element, container) {
+		var wpElement = wp.element;
+		if (typeof wpElement.createRoot === 'function') {
+			var root = elementRoots.get(container);
+			if (!root) {
+				root = wpElement.createRoot(container);
+				elementRoots.set(container, root);
+			}
+			root.render(element);
+			return;
+		}
+		if (typeof wpElement.render === 'function') {
+			wpElement.render(element, container);
+		}
+	}
+
+	/**
+	 * Unmount what renderIntoRoot() rendered into a container, with the call
+	 * that matches its root: root.unmount() or unmountComponentAtNode().
+	 *
+	 * @param {Element} container Container element
+	 * @return {boolean} True when a root was unmounted
+	 */
+	function unmountRoot(container) {
+		var root = elementRoots.get(container);
+		if (root) {
+			elementRoots['delete'](container);
+			root.unmount();
+			return true;
+		}
+		if (typeof wp.element.unmountComponentAtNode === 'function') {
+			return wp.element.unmountComponentAtNode(container) === true;
+		}
+		return false;
+	}
+
+	// The containers this script rendered a root into, while they are on the
+	// page, the observer that notices when they leave, and the documents it
+	// watches (an iframe's document too)
+	var watchedContainers = [];
+	var containerObserver = null;
+	var observedDocuments = [];
+
+	/**
+	 * Unmount the root of each watched container that left the page, and
+	 * stop observing when none is left. An error in one unmount does not
+	 * stop the others; the first is thrown again afterward, so it still
+	 * shows in the console.
+	 */
+	function releaseDetachedRoots() {
+		var firstError = null;
+		watchedContainers = watchedContainers.filter(function(container) {
+			if (container.isConnected) {
+				return true;
+			}
+			try {
+				unmountRoot(container);
+			} catch (error) {
+				if (!firstError) {
+					firstError = error;
+				}
+			}
+			return false;
+		});
+		if (watchedContainers.length === 0 && containerObserver) {
+			containerObserver.disconnect();
+			containerObserver = null;
+			observedDocuments = [];
+		}
+		if (firstError) {
+			setTimeout(function() {
+				throw firstError;
+			}, 0);
+		}
+	}
+
+	/**
+	 * Unmount a container's root when the container leaves the page (its
+	 * dialog closes, or the block sidebar shows another block). Core
+	 * unmounts only a root that render() made in a hook container itself
+	 * (#419): not a createRoot() root, and not a root in an element that a
+	 * script appends to the container.
+	 *
+	 * A container that is not on the page when its hook fires is a render
+	 * the editor never shows: when the block sidebar shows another block, it
+	 * mounts the last block's controls once more in a panel that is not in
+	 * the document. Its root is unmounted as soon as that commit is over,
+	 * unless the container is on the page by then.
+	 *
+	 * Call it after renderIntoRoot().
+	 *
+	 * @param {Element} container Element a root was rendered into
+	 */
+	function watchRootContainer(container) {
+		// Only a root that a call can unmount is watched
+		if (typeof window.MutationObserver !== 'function' ||
+			watchedContainers.indexOf(container) !== -1 ||
+			!(elementRoots.has(container) || typeof wp.element.unmountComponentAtNode === 'function')) {
+			return;
+		}
+		watchedContainers.push(container);
+		if (!container.isConnected) {
+			Promise.resolve().then(function() {
+				// A container that is on the page now is watched like any
+				// other: observe its document before the detached ones go
+				watchedContainers.forEach(observeContainerDocument);
+				releaseDetachedRoots();
+			});
+			return;
+		}
+		observeContainerDocument(container);
+	}
+
+	/**
+	 * Observe the document of a watched container that is on the page, so
+	 * that releaseDetachedRoots() runs when the container leaves it.
+	 *
+	 * @param {Element} container Watched container
+	 */
+	function observeContainerDocument(container) {
+		if (!container.isConnected) {
+			return;
+		}
+		if (!containerObserver) {
+			containerObserver = new window.MutationObserver(releaseDetachedRoots);
+		}
+		var doc = container.ownerDocument;
+		if (observedDocuments.indexOf(doc) === -1) {
+			observedDocuments.push(doc);
+			containerObserver.observe(doc.body, { childList: true, subtree: true });
+		}
+	}
+
+	// This script's element in each hook container it renders into
+	var hookContainerMounts = new WeakMap();
+
+	/**
+	 * Render an element into this script's own element in a hook container,
+	 * and unmount its root when that element leaves the page.
+	 *
+	 * The root is never made on the hook container itself: another
+	 * extension can render into the same container, with render() or with
+	 * createRoot(), and two roots on one element conflict. React warns, the
+	 * first commit of a createRoot() root empties the container, and core's
+	 * unmount of a render() root then throws.
+	 *
+	 * The element goes into the container as soon as the commit that fired
+	 * the hook is over, after the hook's other actions: the first render()
+	 * into a container empties it, so an element added before an extension
+	 * that renders later would leave the page at once. The first render
+	 * goes into the element before that.
+	 *
+	 * A later call for the same container renders into the same root. If
+	 * something emptied the container since, a new element goes in; the old
+	 * element's root was unmounted when the element left the page.
+	 *
+	 * @param {Object}  element   React element
+	 * @param {Element} container Hook container
+	 * @param {string}  className Class of this script's element
+	 */
+	function renderIntoHookContainer(element, container, className) {
+		var entry = hookContainerMounts.get(container);
+		if (entry && (!entry.added || entry.mount.parentNode === container)) {
+			renderIntoRoot(element, entry.mount);
+			if (entry.added) {
+				watchRootContainer(entry.mount);
+			}
+			return;
+		}
+		var mount = container.ownerDocument.createElement('div');
+		mount.className = className;
+		var created = { mount: mount, added: false };
+		hookContainerMounts.set(container, created);
+		renderIntoRoot(element, mount);
+		Promise.resolve().then(function() {
+			created.added = true;
+			container.appendChild(mount);
+			watchRootContainer(mount);
+		});
+	}
+
+	// -------------------------------------------------------------------------
 	// Browser mounting (a Modal outside the editor's React tree)
 	// -------------------------------------------------------------------------
 
@@ -1735,7 +1934,7 @@
 
 	function closeBrowser() {
 		if (browserRoot) {
-			wp.element.unmountComponentAtNode(browserRoot);
+			unmountRoot(browserRoot);
 			if (browserRoot.parentNode) {
 				browserRoot.parentNode.removeChild(browserRoot);
 			}
@@ -1786,7 +1985,7 @@
 			? context.selectedText
 			: ((captured && captured.text) || '');
 
-		wp.element.render(
+		renderIntoRoot(
 			el(ParagraphStylesBrowser, {
 				// In selection scope the pressed row and Detach must describe
 				// the selection's own style, not the block's (see the helper).
@@ -2480,13 +2679,20 @@
 	// Hook into both editors
 	// -------------------------------------------------------------------------
 
+	// The panel's root is in an element of its own in the hook container,
+	// so other extensions can render into the container too
 	function renderPanel(containerEl, editorSource, hostState) {
 		injectStyles();
-		wp.element.render(
+		renderIntoHookContainer(
 			el(ParagraphStylesPanel, { editorSource: editorSource, hostState: hostState || null }),
-			containerEl
+			containerEl,
+			'typost-ps-root'
 		);
 	}
+
+	// The typost_inline_modal_top container the panel was rendered into
+	// last: typost_inline_modal_opened renders into the same root again
+	var inlineTopContainer = null;
 
 	// Wait for typostHooks to be available
 	function waitForHooks(callback) {
@@ -2512,6 +2718,7 @@
 		// The host's state rides along: its saved selection range is what the
 		// style browser hands back so the modal can reopen where it was.
 		window.typostHooks.addAction('typost_inline_modal_top', function(el, state) {
+			inlineTopContainer = el;
 			renderPanel(el, 'inline', state);
 		}, 10);
 
@@ -2525,11 +2732,13 @@
 			renderPanel(el, 'inspector');
 		}, 10);
 
-		// Re-render on modal open to refresh styles list and detect active style
+		// Re-render on modal open to refresh styles list and detect active
+		// style. The dialog's typost_inline_modal_top container fires in the
+		// commit that opens it, before this action; a container that left
+		// the page belongs to a dialog that closed.
 		window.typostHooks.addAction('typost_inline_modal_opened', function(state) {
-			var hookEl = document.querySelector('[data-hook="typost_inline_modal_top"]');
-			if (hookEl) {
-				renderPanel(hookEl, 'inline', state);
+			if (inlineTopContainer && inlineTopContainer.isConnected) {
+				renderPanel(inlineTopContainer, 'inline', state);
 			}
 		}, 10);
 

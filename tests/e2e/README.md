@@ -251,6 +251,37 @@ by a page script that wraps `typostHooks.applyFilters`. Each test works on
 its own draft, and the first four on their own paragraph style ("ZZ #419
 …"). It runs in Chromium only.
 
+### `module-roots.spec.js` — #456
+
+The bundled modules render with `wp.element.createRoot()` where WordPress
+has it. A page script replaces `wp.element`, when WordPress sets it, with a
+copy that records each root a module makes and whether it was unmounted,
+and records the React messages about `render()` and
+`unmountComponentAtNode()` with the module that caused them. Each test
+opens and closes the inline dialog (once with the Glyphs panel, whose close
+opens the dialog again), the Quick Feature Toggles and the block sidebar,
+and counts the Paragraph Styles panel's calls to the
+`typost_current_editor_state` filter, as `hook-container-unmount.spec.js`
+does. The first test removes `render()` and `unmountComponentAtNode()`
+before any script runs, as React 19 does: the panels and the Glyphs button
+show, and every module root whose container left the page is unmounted
+(with a variable font, the sidebar's axes too). Hook actions that other
+extensions on the site add are left out in that test, because they can
+still call `render()`. The second test expects no "ReactDOM.render is no
+longer supported" message caused by a module; React logs it only with
+`SCRIPT_DEBUG` on (wp-env has it on). The last four tests add a test
+extension to the block sidebar's top and the Quick Feature Toggles' top,
+the containers of the Paragraph Styles panel, before the panel's action
+(priority 5) and after it (20): once with `render()` into the container
+itself, and once as the React example in `HOOKS.md` does (read from that
+file). The panel and the extension both show, React logs nothing about two
+roots on one element, no error reaches the page, and every root is
+unmounted when its container leaves. Those tests leave out the hook
+actions of other extensions on the site too: one of them renders into the
+sidebar's container, and a later `render()` there would empty it. Each
+test works on its own draft and paragraph style ("ZZ #456 …"). It runs in
+Chromium only.
+
 ### `helpers.js`
 
 Shared helpers (open the editor, select text with the keyboard, REST
