@@ -2948,7 +2948,8 @@ class Typost {
      * reference (<!-- wp:block {"ref":N} /-->), so a save of the pattern
      * changes no post, and the posts kept loading the old fonts. This
      * deletes the same two caches that a save of each of those posts
-     * deletes. A post with no "ref":N in its content keeps its caches.
+     * deletes. Without a persistent object cache, a post with no "ref":N in
+     * its content keeps its caches.
      *
      * The posts are found by the saved reference: "ref":N followed by "}"
      * or ",", so pattern 12 does not match 123 or 1234. The match does not
@@ -2974,14 +2975,17 @@ class Typost {
      * are found but keep no per-post cache: a block theme reads their fonts
      * as they render (#481).
      *
+     * Under a persistent object cache this searches nothing. The same save
+     * runs clear_post_content_caches() first, which makes the per-post cache
+     * of every post stale (#486), so every post scans again on its next view
+     * and the search would find nothing left to clear.
+     *
      * Cost: one SELECT of IDs and post types per level of nesting (one level
      * for a pattern that no other pattern holds). Each SELECT reads the
      * post_content column of the posts table with LIKE, as a search of the
      * site does. A first LIKE on '"ref":' leaves out the posts that hold no
      * reference, so a level with many patterns costs about as much as a level
-     * with one. Then one DELETE for each 100 posts found. Under a persistent
-     * object cache, where the transients are not in the options table, each
-     * key is deleted from the object cache instead, with no flush.
+     * with one. Then one DELETE for each 100 posts found.
      *
      * @since 2.4.0
      *
@@ -2991,6 +2995,12 @@ class Typost {
     private function clear_synced_pattern_user_caches($pattern_id) {
         $pattern_id = absint($pattern_id);
         if (!$pattern_id) {
+            return array();
+        }
+
+        // clear_post_content_caches() of the same save has already made every
+        // per-post cache stale under a persistent object cache (#486)
+        if (wp_using_ext_object_cache()) {
             return array();
         }
 
@@ -3046,13 +3056,6 @@ class Typost {
         foreach ($post_ids as $id) {
             $keys[] = 'typost_has_styled_' . $id;
             $keys[] = 'typost_used_fonts_' . $id;
-        }
-
-        if (wp_using_ext_object_cache()) {
-            foreach ($keys as $key) {
-                wp_cache_delete($key, 'transient');
-            }
-            return $post_ids;
         }
 
         // 100 posts per DELETE: two caches, each a value row and a timeout row

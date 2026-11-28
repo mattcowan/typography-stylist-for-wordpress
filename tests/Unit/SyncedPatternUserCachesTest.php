@@ -38,6 +38,9 @@ class SyncedPatternUserCachesTest extends TestCase {
     /** @var bool What wp_using_ext_object_cache() reports */
     private $persistent;
 
+    /** @var bool Whether wp_cache_flush() was called */
+    private $flushed;
+
     protected function setUp(): void {
         parent::setUp();
 
@@ -60,7 +63,11 @@ class SyncedPatternUserCachesTest extends TestCase {
             $this->cacheDeletes[] = [$key, $group];
             return true;
         });
-        Functions\when('wp_cache_flush')->justReturn(true);
+        $this->flushed = false;
+        Functions\when('wp_cache_flush')->alias(function () {
+            $this->flushed = true;
+            return true;
+        });
         // The per-post key helper of #486 reads the generation under a
         // persistent object cache, through clear_post_content_caches()
         Functions\when('wp_cache_get_last_changed')->justReturn('1');
@@ -437,22 +444,34 @@ class SyncedPatternUserCachesTest extends TestCase {
     }
 
     /**
-     * Under a persistent object cache the transients are in the cache, not
-     * in the options table: each key is deleted there, and this method runs
-     * no flush of its own.
+     * Under a persistent object cache the pattern save already makes every
+     * per-post cache stale in clear_post_content_caches() (a flush before
+     * #486, the generation delete after it), so the search does not run.
      */
-    public function test_with_a_persistent_object_cache_the_keys_are_deleted_from_the_cache() {
+    public function test_with_a_persistent_object_cache_the_search_does_not_run() {
         $this->persistent = true;
         $this->addPost(12, 'wp_block', 'Pattern');
         $this->addPost(100, 'post', $this->ref(12));
-        $this->addPost(200, 'post', $this->ref(123));
 
         $this->savePattern(12);
 
-        $this->assertContains(['typost_used_fonts_100', 'transient'], $this->cacheDeletes);
-        $this->assertContains(['typost_has_styled_100', 'transient'], $this->cacheDeletes);
-        $this->assertNotContains(['typost_used_fonts_200', 'transient'], $this->cacheDeletes);
+        $this->assertSame([], $this->db->selects);
         $this->assertSame([], $this->db->optionDeletes);
+        $this->assertNotContains(['typost_used_fonts_100', 'transient'], $this->cacheDeletes);
+        $this->assertTrue(
+            $this->flushed || in_array(['last_changed', 'typost_font_detection'], $this->cacheDeletes, true),
+            'The save makes the cache of every post stale, which the skip relies on'
+        );
+    }
+
+    public function test_without_a_persistent_object_cache_the_search_runs() {
+        $this->addPost(12, 'wp_block', 'Pattern');
+        $this->addPost(100, 'post', $this->ref(12));
+
+        $this->savePattern(12);
+
+        $this->assertCount(1, $this->db->selects);
+        $this->assertCleared(100);
     }
 
     public function invalidIdsProvider() {
