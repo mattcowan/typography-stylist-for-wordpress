@@ -2948,17 +2948,20 @@ class Typost {
      * reference (<!-- wp:block {"ref":N} /-->), so a save of the pattern
      * changes no post, and the posts kept loading the old fonts. This
      * deletes the same two caches that a save of each of those posts
-     * deletes. A post that does not use the pattern keeps its caches.
+     * deletes. A post with no "ref":N in its content keeps its caches.
      *
      * The posts are found by the saved reference: "ref":N followed by "}"
-     * or ",", so pattern 12 does not match 123 or 1234. The block serializer
-     * writes the attributes with no spaces and the ID as a number; a
-     * hand-written "ref": 12 or "ref":"12" is not found. A pattern can be
-     * inside another pattern, and a post that uses the outer pattern names
-     * only that one, so the search follows the references up through other
-     * synced patterns. A visited set searches each pattern once, so patterns
-     * that hold each other cannot loop, and the search stops at the first
-     * level that finds no new pattern. The page render
+     * or ",", so pattern 12 does not match 123 or 1234. The match does not
+     * read the block name, so a post where another block saves a "ref":N
+     * attribute is cleared too and scans its content once more on its next
+     * view: a wrong match costs one scan, a missed one leaves old fonts.
+     * The block serializer writes the attributes with no spaces and the ID
+     * as a number; a hand-written "ref": 12 or "ref":"12" is not found. A
+     * pattern can be inside another pattern, and a post that uses the outer
+     * pattern names only that one, so the search follows the references up
+     * through other synced patterns. A visited set searches each pattern
+     * once, so patterns that hold each other cannot loop, and the search
+     * stops at the first level that finds no new pattern. The page render
      * (render_block_core_block()) has no depth limit, so the search has
      * only a cost ceiling of 20 levels, deeper than real sites nest
      * patterns. The search runs for an unsynced pattern too: core renders a
@@ -2966,10 +2969,10 @@ class Typost {
      * after posts reference the pattern.
      *
      * A synced pattern has no view, so it keeps no cache of its own here.
-     * Revisions are not searched. Posts of
-     * types without a frontend view (is_font_cache_post_type()), for example
-     * templates and template parts, are found but keep no per-post cache: a
-     * block theme reads their fonts as they render (#481).
+     * Revisions are not searched. Posts of types without a frontend view
+     * (is_font_cache_post_type()), for example templates and template parts,
+     * are found but keep no per-post cache: a block theme reads their fonts
+     * as they render (#481).
      *
      * Cost: one SELECT of IDs and post types per level of nesting (one level
      * for a pattern that no other pattern holds). Each SELECT reads the
