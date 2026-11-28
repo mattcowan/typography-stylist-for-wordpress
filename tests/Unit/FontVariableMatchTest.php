@@ -79,10 +79,35 @@ class FontVariableMatchTest extends TestCase {
         // captures the number; the declaration parser anchors with ^ and is
         // not a scan.
         $this->assertSame(0, preg_match_all('/\'\/--font-\(\\\\d\+\)\//', $source), 'no scan keeps /--font-(\d+)/');
+        // Any other spelling of a --font- pattern written inline in a
+        // preg_match() or preg_match_all() call (double quotes, \b, [0-9]):
+        // only the anchored declaration parser of
+        // join_font_css_declarations() may do that.
+        $this->assertSame(1, preg_match_all(self::INLINE_FONT_PATTERN_CALL, $source), 'only the declaration parser writes its own --font- pattern');
     }
 
     public function test_control_the_source_check_finds_a_planted_scan_pattern() {
         $planted = "if (preg_match_all('/--font-(\\d+)/', \$raw, \$matches)) {";
         $this->assertSame(1, preg_match_all('/\'\/--font-\(\\\\d\+\)\//', $planted));
     }
+
+    /**
+     * The inline check finds a scan pattern in other spellings, and does not
+     * count the constant or a pattern kept in a variable.
+     */
+    public function test_control_the_inline_check_finds_other_spellings() {
+        $planted = array(
+            "preg_match_all(\"/--font-(\\\\d+)/\", \$raw, \$m)",
+            "preg_match_all('/--font-(\\d+)\\b/', \$raw, \$m)",
+            "preg_match_all('/--font-([0-9]+)/', \$raw, \$m)",
+            "preg_match_all('/var\\(--font-(\\d+)\\)/', \$raw, \$m)",
+        );
+        foreach ($planted as $line) {
+            $this->assertSame(1, preg_match_all(self::INLINE_FONT_PATTERN_CALL, $line), $line);
+        }
+        $this->assertSame(0, preg_match_all(self::INLINE_FONT_PATTERN_CALL, 'preg_match_all(self::FONT_VARIABLE_PATTERN, $raw, $m)'));
+    }
+
+    /** A preg_match() or preg_match_all() call whose inline pattern names --font-. */
+    const INLINE_FONT_PATTERN_CALL = '/preg_match(?:_all)?\(\s*([\'"])(?:(?!\1).)*--font-/';
 }

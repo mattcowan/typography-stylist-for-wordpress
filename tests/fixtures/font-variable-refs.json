@@ -10,6 +10,7 @@
 		{ "label": "a theme.json custom property", "markup": "font-size: var(--wp--custom--font-2-size)", "ids": [] },
 		{ "label": "a prefix before the name", "markup": "--brand-font-2: x; var(--my--font-2)", "ids": [] },
 		{ "label": "a suffix after the number", "markup": "var(--font-2-size)", "ids": [] },
+		{ "label": "a third hyphen before the name", "markup": "var(---font-2)", "ids": [] },
 		{ "label": "a letter or underscore after the number", "markup": "var(--font-9_x) var(--font-9a)", "ids": [] },
 		{ "label": "a theme property next to a real reference", "markup": "var(--wp--custom--font-2-size) var(--font-36)", "ids": [36] }
 	]
