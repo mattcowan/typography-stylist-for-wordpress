@@ -12,17 +12,21 @@ use Brain\Monkey\Functions;
  * post's two font caches by name and every archive font cache with a
  * wildcard row delete. A row delete does not reach a persistent object
  * cache (Redis, Memcached), where the transients live, so only there does
- * it delete the generation of the archive keys (`last_changed` in the
- * `typost_archive_fonts` group). It never flushes the object cache: until
+ * it delete the generation of the font detection keys (`last_changed` in
+ * the `typost_font_detection` group), and the post's two keys then carry
+ * that generation after the ID. It never flushes the object cache: until
  * #484 it flushed on every site, and until #486 under a persistent object
- * cache. What the generation does to the archive keys is covered in
- * ArchiveFontCacheGenerationTest.
+ * cache. What the generation does to the archive and per-post keys is
+ * covered in ArchiveFontCacheGenerationTest.
  *
  * The tests call clear_post_content_caches() directly and through
  * on_post_delete(). Which saves reach it is on_post_save()'s rule, covered
  * in PostFontCacheTest.
  */
 class PostCacheFlushTest extends TestCase {
+
+    /** What wp_cache_get_last_changed() reports for the font detection keys */
+    private const GENERATION = '0.12345600 1764200000';
 
     /** @var string[] Transient names passed to delete_transient() */
     private $deletes;
@@ -69,6 +73,7 @@ class PostCacheFlushTest extends TestCase {
         Functions\when('wp_using_ext_object_cache')->alias(function () {
             return $this->persistent;
         });
+        Functions\when('wp_cache_get_last_changed')->justReturn(self::GENERATION);
         Functions\when('absint')->alias(function ($value) {
             return abs((int) $value);
         });
@@ -126,10 +131,10 @@ class PostCacheFlushTest extends TestCase {
         return $archive ? $archive[0] : null;
     }
 
-    /** How many times the archive key generation was deleted. */
+    /** How many times the font detection key generation was deleted. */
     private function generationDeletes() {
         return count(array_filter($this->cacheDeletes, function ($args) {
-            return ['last_changed', 'typost_archive_fonts'] === $args;
+            return ['last_changed', 'typost_font_detection'] === $args;
         }));
     }
 
@@ -180,7 +185,9 @@ class PostCacheFlushTest extends TestCase {
 
         $this->assertSame(0, $this->flushes);
         $this->assertSame(1, $this->generationDeletes());
-        $this->assertSame(['typost_has_styled_7', 'typost_used_fonts_7'], $this->deletes);
+        // The post's own keys of the current generation (#486)
+        $suffix = '_' . substr(md5(self::GENERATION), 0, 8);
+        $this->assertSame(['typost_has_styled_7' . $suffix, 'typost_used_fonts_7' . $suffix], $this->deletes);
         $this->assertArchiveCachesDeleted();
     }
 

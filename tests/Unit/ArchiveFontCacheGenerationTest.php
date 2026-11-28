@@ -5,7 +5,7 @@ use TypographyStylist\Tests\TestCase;
 use Brain\Monkey\Functions;
 
 /**
- * Tests for the generation in the archive font cache keys (#486).
+ * Tests for the generation in the font detection cache keys (#486).
  *
  * An archive page caches its font answers under keys that hash the IDs of
  * the listed posts (`typost_has_styled_archive_…`,
@@ -13,10 +13,17 @@ use Brain\Monkey\Functions;
  * the archives that list the post. Without a persistent object cache the
  * transients are option rows, and a save deletes them with a wildcard. With
  * one, they are in the object cache, which cannot delete by prefix: the
- * keys then also hash the generation of the `typost_archive_fonts` cache
+ * keys then also hash the generation of the `typost_font_detection` cache
  * group (`wp_cache_get_last_changed()`), and a published or private save or
  * delete deletes that generation instead of flushing the whole object
  * cache.
+ *
+ * A singular page can also show other posts (a Query Loop, a synced
+ * pattern), and its own keys (`typost_has_styled_<ID>`,
+ * `typost_used_fonts_<ID>`) then hold their fonts. Under a persistent
+ * object cache these keys carry the same generation after the ID, so the
+ * save of a listed post also makes the page scan again (review of #486).
+ * Without one they keep their old names.
  *
  * The object cache here is an in-memory map behind Brain Monkey stubs of
  * the wp_cache_*() functions, with core's `last_changed` logic and a
@@ -24,6 +31,12 @@ use Brain\Monkey\Functions;
  * values.
  */
 class ArchiveFontCacheGenerationTest extends TestCase {
+
+    /** Cache group of the generation */
+    const GROUP = 'typost_font_detection';
+
+    /** ID of the singular page that lists post 1 in a Query Loop */
+    const PAGE_ID = 10;
 
     /** @var array<string, array<string, mixed>> Object cache: group => key => value */
     private $cache;
@@ -48,6 +61,9 @@ class ArchiveFontCacheGenerationTest extends TestCase {
 
     /** @var int Posts whose content an archive scan read */
     private $scans;
+
+    /** @var string Content of the post that the Query Loop page lists */
+    private $listed;
 
     public static function setUpBeforeClass(): void {
         parent::setUpBeforeClass();
@@ -224,9 +240,44 @@ class ArchiveFontCacheGenerationTest extends TestCase {
         }));
     }
 
-    /** Whether the archive generation is gone from the object cache. */
+    /** Whether the generation is gone from the object cache. */
     private function generationDeleted() {
-        return !isset($this->cache['typost_archive_fonts']['last_changed']);
+        return !isset($this->cache[self::GROUP]['last_changed']);
+    }
+
+    /**
+     * A singular page whose content is a Query Loop that shows post 1.
+     *
+     * do_blocks() renders the loop as the current content of post 1
+     * ($listed), as core/post-template renders the listed posts.
+     *
+     * @param string $listed Content of post 1.
+     */
+    private function queryLoopPage($listed) {
+        $this->listed = $listed;
+        Functions\when('is_singular')->justReturn(true);
+        Functions\when('current_user_can')->justReturn(false);
+        Functions\when('get_queried_object')->justReturn((object) [
+            'ID' => self::PAGE_ID,
+            'post_content' => '<!-- wp:query /-->',
+        ]);
+        Functions\when('do_blocks')->alias(function ($content) {
+            $this->scans++;
+            return str_replace('<!-- wp:query /-->', $this->listed, $content);
+        });
+    }
+
+    /** Per-post cache reads of the page. */
+    private function pageReads() {
+        return array_values(array_filter($this->reads, function ($key) {
+            return strpos($key, '_archive_') === false;
+        }));
+    }
+
+    /** Save post $id with status $status, as save_post does. */
+    private function save($id, $status) {
+        Functions\when('get_post_status')->justReturn($status);
+        $this->plugin()->on_post_save($id, (object) ['ID' => $id, 'post_type' => 'post'], true);
     }
 
     // ── Without a persistent object cache ───────────────────────────────────
@@ -237,7 +288,6 @@ class ArchiveFontCacheGenerationTest extends TestCase {
      * an orphan row each time.
      */
     public function test_without_a_persistent_object_cache_the_archive_keys_have_no_generation() {
-        Functions\expect('wp_cache_get_last_changed')->never();
         $this->archive();
 
         $this->view();
@@ -246,10 +296,12 @@ class ArchiveFontCacheGenerationTest extends TestCase {
             $this->legacyKey('typost_has_styled_archive_'),
             $this->legacyKey('typost_used_fonts_archive_'),
         ], $this->archiveReads());
+        // setUp() aliases wp_cache_get_last_changed(), so an expect()->never()
+        // would not be enforced; the alias counts each generation it makes.
+        $this->assertSame(0, $this->generations, 'No generation is read without a persistent object cache');
     }
 
     public function test_without_a_persistent_object_cache_a_save_deletes_the_rows_and_does_not_flush() {
-        Functions\expect('wp_cache_get_last_changed')->never();
         $this->archive();
         $this->view();
         $this->cache['other_plugin']['value'] = 'kept';
@@ -262,6 +314,7 @@ class ArchiveFontCacheGenerationTest extends TestCase {
             return strpos($sql, 'archive') !== false;
         }));
         $this->assertCount(1, $archive, 'The wildcard row delete still runs');
+        $this->assertSame(0, $this->generations, 'No generation is read without a persistent object cache');
     }
 
     // ── With a persistent object cache ──────────────────────────────────────
@@ -357,8 +410,124 @@ class ArchiveFontCacheGenerationTest extends TestCase {
         $this->view();
         $this->changePostOne($this->span(52));
 
-        unset($this->cache['typost_archive_fonts']);
+        unset($this->cache[self::GROUP]);
 
         $this->assertSame(['styled' => true, 'fonts' => ['id:52']], $this->view());
+    }
+
+    // ── Per-post keys of a singular page ────────────────────────────────────
+
+    /**
+     * Without a persistent object cache the per-post keys keep their old
+     * names, byte for byte, and read no generation.
+     */
+    public function test_without_a_persistent_object_cache_the_per_post_keys_are_the_old_names() {
+        $this->queryLoopPage($this->span(48));
+
+        $this->assertSame(['styled' => true, 'fonts' => ['id:48']], $this->view());
+
+        $this->assertSame(['typost_has_styled_10', 'typost_used_fonts_10'], $this->pageReads());
+        $this->assertSame(['typost_has_styled_10', 'typost_used_fonts_10'], array_keys($this->transients));
+        $this->assertSame(0, $this->generations, 'No generation is read without a persistent object cache');
+    }
+
+    /**
+     * With a persistent object cache the per-post keys carry the generation
+     * after the ID: the prefix stays first, so the `typost_has_styled_%` and
+     * `typost_used_fonts_%` matches of clear_font_detection_cache() still
+     * find them, and both share the generation of the archive keys.
+     */
+    public function test_with_a_persistent_object_cache_the_per_post_keys_carry_the_generation_after_the_id() {
+        $this->persistent = true;
+        $this->queryLoopPage($this->span(48));
+
+        $this->view();
+
+        $reads = $this->pageReads();
+        $this->assertCount(2, $reads);
+        $this->assertStringStartsWith('typost_has_styled_10_', $reads[0]);
+        $this->assertStringStartsWith('typost_used_fonts_10_', $reads[1]);
+        $this->assertSame(1, $this->generations, 'Both per-post keys share one generation');
+        $this->assertSame($reads, array_keys($this->cache['transient']), 'The writes use the same keys as the reads');
+
+        // A new generation gives new names
+        unset($this->cache[self::GROUP]);
+        $this->reads = [];
+        $this->view();
+        $this->assertNotSame($reads, $this->pageReads());
+    }
+
+    /**
+     * The review case: a page with a Query Loop caches the fonts of the
+     * post that the loop shows. A published save of that post (not of the
+     * page) must make the page scan again, without a flush.
+     */
+    public function test_with_a_persistent_object_cache_a_save_of_a_listed_post_makes_the_page_scan_again() {
+        $this->persistent = true;
+        $this->cache['other_plugin']['value'] = 'kept';
+        $this->queryLoopPage($this->span(48));
+
+        $this->assertSame(['styled' => true, 'fonts' => ['id:48']], $this->view());
+
+        // The next view hits the page's own cache: no scan, the old answer
+        $this->listed = $this->span(52);
+        $scans = $this->scans;
+        $this->assertSame(['styled' => true, 'fonts' => ['id:48']], $this->view());
+        $this->assertSame($scans, $this->scans, 'A cached page does not scan');
+
+        // Post 1, which the loop lists, is saved with font 52
+        $this->save(1, 'publish');
+
+        $this->assertSame(0, $this->flushes, 'A post save does not flush the object cache');
+        $this->assertSame('kept', $this->cache['other_plugin']['value']);
+        $this->assertSame(['styled' => true, 'fonts' => ['id:52']], $this->view());
+        $this->assertGreaterThan($scans, $this->scans, 'The page scans again');
+    }
+
+    public function test_with_a_persistent_object_cache_a_draft_save_of_another_post_keeps_the_page_cache() {
+        $this->persistent = true;
+        $this->queryLoopPage($this->span(48));
+        $this->view();
+        $this->listed = $this->span(52);
+        $scans = $this->scans;
+
+        $this->save(1, 'draft');
+
+        $this->assertFalse($this->generationDeleted(), 'A draft save keeps the generation');
+        $this->assertSame(['styled' => true, 'fonts' => ['id:48']], $this->view());
+        $this->assertSame($scans, $this->scans, 'The page does not scan again');
+    }
+
+    /**
+     * A save of the page itself to a status that archives do not list
+     * deletes its own two keys of the current generation, and keeps the
+     * generation (#480).
+     */
+    public function test_with_a_persistent_object_cache_a_draft_save_of_the_page_deletes_its_own_keys() {
+        $this->persistent = true;
+        $this->queryLoopPage($this->span(48));
+        $this->view();
+        $keys = $this->pageReads();
+        $this->assertSame($keys, array_keys($this->cache['transient']));
+
+        $this->save(self::PAGE_ID, 'draft');
+
+        $this->assertSame([], $this->cache['transient'], 'Both versioned keys are deleted');
+        $this->assertFalse($this->generationDeleted(), 'A draft save keeps the generation');
+    }
+
+    /**
+     * Without a persistent object cache a save of the listed post deletes
+     * the archive rows only: the page keeps its own key, as before #486.
+     */
+    public function test_without_a_persistent_object_cache_a_save_of_a_listed_post_keeps_the_page_key() {
+        $this->queryLoopPage($this->span(48));
+        $this->view();
+
+        $this->save(1, 'publish');
+
+        $this->assertSame(['typost_has_styled_10', 'typost_used_fonts_10'], array_keys($this->transients));
+        $this->assertSame(0, $this->flushes);
+        $this->assertSame(0, $this->generations);
     }
 }
