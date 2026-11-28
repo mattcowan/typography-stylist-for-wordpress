@@ -2941,6 +2941,10 @@ class Typost {
      * An autosave of a draft by its author updates the draft itself, but a
      * draft is seen only in Preview, which reads no per-post cache.
      *
+     * A published or private save of a synced pattern also clears the
+     * caches of the posts that use it (clear_synced_pattern_user_caches(),
+     * #487).
+     *
      * Only a post type whose content the frontend scan reads clears (#483):
      * a type with a frontend view (is_post_type_viewable(): posts, pages,
      * attachments, public custom post types) and synced patterns
@@ -2975,24 +2979,31 @@ class Typost {
             return;
         }
 
-        $this->clear_font_caches_for_status($post_id);
+        $this->clear_font_caches_for_status($post_id, $post_type);
     }
 
     /**
      * Clear the font caches that a save or delete of this post changes
      *
      * A published or private post: its own two caches and the archive
-     * caches (clear_post_content_caches()). Any other status (draft,
-     * pending, future, auto-draft, trash): only its own two caches, by exact
-     * key, because archives list no other status (#480).
+     * caches (clear_post_content_caches()); for a synced pattern, also the
+     * caches of the posts that use it (clear_synced_pattern_user_caches(),
+     * #487). Any other status (draft, pending, future, auto-draft, trash):
+     * only its own two caches, by exact key, because archives list no other
+     * status (#480), and WordPress renders a synced pattern only while it is
+     * published.
      *
      * @since 2.4.0
      *
-     * @param int $post_id Post ID.
+     * @param int    $post_id   Post ID.
+     * @param string $post_type Post type of the post.
      */
-    private function clear_font_caches_for_status($post_id) {
+    private function clear_font_caches_for_status($post_id, $post_type) {
         if (in_array(get_post_status($post_id), array('publish', 'private'), true)) {
             $this->clear_post_content_caches($post_id);
+            if ('wp_block' === $post_type) {
+                $this->clear_synced_pattern_user_caches($post_id);
+            }
             return;
         }
 
@@ -3027,6 +3038,144 @@ class Typost {
     }
 
     /**
+     * Clear the per-post font caches of the posts that use a synced pattern (#487)
+     *
+     * The content scan renders synced patterns (core/block), so the fonts of
+     * a pattern are in the typost_used_fonts_<ID> and typost_has_styled_<ID>
+     * caches of each post that uses it, for 12 hours. A post saves only the
+     * reference (<!-- wp:block {"ref":N} /-->), so a save of the pattern
+     * changes no post, and the posts kept loading the old fonts. This
+     * deletes the same two caches that a save of each of those posts
+     * deletes. Without a persistent object cache, a post with no "ref":N in
+     * its content keeps its caches.
+     *
+     * The posts are found by the saved reference: "ref":N followed by "}"
+     * or ",", so pattern 12 does not match 123 or 1234. The match does not
+     * read the block name, so a post where another block saves a "ref":N
+     * attribute is cleared too and scans its content once more on its next
+     * view: a wrong match costs one scan, a missed one leaves old fonts.
+     * The block serializer writes the attributes with no spaces and the ID
+     * as a number; a hand-written "ref": 12 or "ref":"12" is not found. A
+     * pattern can be inside another pattern, and a post that uses the outer
+     * pattern names only that one, so the search follows the references up
+     * through other synced patterns. A visited set searches each pattern
+     * once, so patterns that hold each other cannot loop, and the search
+     * stops at the first level that finds no new pattern. The page render
+     * (render_block_core_block()) has no depth limit, so the search has
+     * only a cost ceiling of 20 levels, deeper than real sites nest
+     * patterns. The search runs for an unsynced pattern too: core renders a
+     * "ref" whatever the pattern's sync status, and the status can change
+     * after posts reference the pattern.
+     *
+     * A synced pattern has no view, so it keeps no cache of its own here.
+     * Revisions are not searched. Posts of types without a frontend view
+     * (is_font_cache_post_type()), for example templates and template parts,
+     * are found but keep no per-post cache: a block theme reads their fonts
+     * as they render (#481).
+     *
+     * Under a persistent object cache this searches nothing. The same save
+     * runs clear_post_content_caches() first, which makes the per-post cache
+     * of every post stale (#486), so every post scans again on its next view
+     * and the search would find nothing left to clear.
+     *
+     * Cost: one SELECT of IDs and post types per level of nesting (one level
+     * for a pattern that no other pattern holds). Each SELECT reads the
+     * post_content column of the posts table with LIKE, as a search of the
+     * site does. A first LIKE on '"ref":' leaves out the posts that hold no
+     * reference, so a level with many patterns costs about as much as a level
+     * with one. Then one DELETE for each 100 posts found.
+     *
+     * @since 2.4.0
+     *
+     * @param int $pattern_id ID of the saved or deleted wp_block post.
+     * @return int[] IDs of the posts whose caches were deleted.
+     */
+    private function clear_synced_pattern_user_caches($pattern_id) {
+        $pattern_id = absint($pattern_id);
+        if (!$pattern_id) {
+            return array();
+        }
+
+        // clear_post_content_caches() of the same save has already made every
+        // per-post cache stale under a persistent object cache (#486)
+        if (wp_using_ext_object_cache()) {
+            return array();
+        }
+
+        global $wpdb;
+
+        $visited = array($pattern_id => true);
+        $frontier = array($pattern_id);
+        $post_ids = array();
+        $clears_type = array();
+
+        // A cost ceiling only: the visited set ends every search, and real
+        // sites stop after a level or two
+        for ($level = 0; $level < 20 && !empty($frontier); $level++) {
+            $likes = array();
+            $args = array('revision', '%' . $wpdb->esc_like('"ref":') . '%');
+            foreach ($frontier as $ref) {
+                $likes[] = 'post_content LIKE %s OR post_content LIKE %s';
+                $args[] = '%' . $wpdb->esc_like('"ref":' . $ref . '}') . '%';
+                $args[] = '%' . $wpdb->esc_like('"ref":' . $ref . ',') . '%';
+            }
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- one placeholder per LIKE, built above
+            $rows = $wpdb->get_results($wpdb->prepare("SELECT ID, post_type FROM {$wpdb->posts} WHERE post_type <> %s AND post_content LIKE %s AND (" . implode(' OR ', $likes) . ')', ...$args));
+
+            $frontier = array();
+            foreach ((array) $rows as $row) {
+                $id = isset($row->ID) ? absint($row->ID) : 0;
+                $type = isset($row->post_type) ? (string) $row->post_type : '';
+                if (!$id || '' === $type) {
+                    continue;
+                }
+                if ('wp_block' === $type) {
+                    if (!isset($visited[$id])) {
+                        $visited[$id] = true;
+                        $frontier[] = $id;
+                    }
+                    continue;
+                }
+                if (!isset($clears_type[$type])) {
+                    $clears_type[$type] = $this->is_font_cache_post_type($type);
+                }
+                if ($clears_type[$type]) {
+                    $post_ids[$id] = true;
+                }
+            }
+        }
+
+        $post_ids = array_keys($post_ids);
+        if (empty($post_ids)) {
+            return array();
+        }
+
+        $keys = array();
+        foreach ($post_ids as $id) {
+            $keys[] = 'typost_has_styled_' . $id;
+            $keys[] = 'typost_used_fonts_' . $id;
+        }
+
+        // 100 posts per DELETE: two caches, each a value row and a timeout row
+        foreach (array_chunk($keys, 200) as $chunk) {
+            $names = array();
+            foreach ($chunk as $key) {
+                $names[] = '_transient_' . $key;
+                $names[] = '_transient_timeout_' . $key;
+            }
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- one placeholder per name, built here
+            $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name IN (" . implode(', ', array_fill(0, count($names), '%s')) . ')', ...$names));
+            // The row delete skips the per-request cache, which can still
+            // hold a value that this request read
+            foreach ($names as $name) {
+                wp_cache_delete($name, 'options');
+            }
+        }
+
+        return $post_ids;
+    }
+
+    /**
      * Handle post deletion: clear per-post and archive font detection caches.
      *
      * The same rules as on_post_save() (#483). Only a content post type
@@ -3051,11 +3200,12 @@ class Typost {
             return;
         }
 
-        if (!$this->is_font_cache_post_type(get_post_type($post_id))) {
+        $post_type = get_post_type($post_id);
+        if (!$this->is_font_cache_post_type($post_type)) {
             return;
         }
 
-        $this->clear_font_caches_for_status($post_id);
+        $this->clear_font_caches_for_status($post_id, $post_type);
     }
 
     /**
