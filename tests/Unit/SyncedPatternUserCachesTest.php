@@ -16,7 +16,8 @@ use Brain\Monkey\Functions;
  *
  * The fake $wpdb below keeps a posts table and an options table. It runs the
  * SELECT that finds the posts the way MySQL would: it reads the WHERE clause
- * (post_type <> 'revision' AND (post_content LIKE ... OR ...)) and applies
+ * (post_type <> 'revision' AND post_content LIKE '%"ref":%' AND
+ * (post_content LIKE ... OR ...)) and applies
  * each LIKE pattern, with its escapes, to every post. A SELECT of another
  * shape fails the test. The DELETE of option rows removes the named rows.
  */
@@ -60,6 +61,9 @@ class SyncedPatternUserCachesTest extends TestCase {
             return true;
         });
         Functions\when('wp_cache_flush')->justReturn(true);
+        // The per-post key helper of #486 reads the generation under a
+        // persistent object cache, through clear_post_content_caches()
+        Functions\when('wp_cache_get_last_changed')->justReturn('1');
         Functions\when('wp_using_ext_object_cache')->alias(function () {
             return $this->persistent;
         });
@@ -111,11 +115,16 @@ class SyncedPatternUserCachesTest extends TestCase {
             }
             public function get_results($sql) {
                 $this->selects[] = $sql;
-                if (!preg_match("/^SELECT ID, post_type FROM wp_posts WHERE post_type <> '([^']*)' AND \\((.*)\\)$/s", $sql, $m)) {
+                if (!preg_match("/^SELECT ID, post_type FROM wp_posts WHERE post_type <> '([^']*)' AND post_content LIKE '([^']*)' AND \\((.*)\\)$/s", $sql, $m)) {
                     throw new \RuntimeException('Unexpected SQL: ' . $sql);
                 }
+                // The prefilter that leaves out posts with no reference (#487 review)
+                if ('%"ref":%' !== $m[2]) {
+                    throw new \RuntimeException('Unexpected prefilter: ' . $m[2]);
+                }
+                $prefilter = self::likeToRegex($m[2]);
                 $regexes = [];
-                foreach (explode(' OR ', $m[2]) as $part) {
+                foreach (explode(' OR ', $m[3]) as $part) {
                     if (!preg_match("/^post_content LIKE '(.*)'$/s", $part, $like)) {
                         throw new \RuntimeException('Unexpected condition: ' . $part);
                     }
@@ -123,7 +132,7 @@ class SyncedPatternUserCachesTest extends TestCase {
                 }
                 $out = [];
                 foreach ($this->rows as $row) {
-                    if ($row['post_type'] === $m[1]) {
+                    if ($row['post_type'] === $m[1] || !preg_match($prefilter, $row['post_content'])) {
                         continue;
                     }
                     foreach ($regexes as $regex) {
@@ -280,26 +289,42 @@ class SyncedPatternUserCachesTest extends TestCase {
     }
 
     /**
-     * get_synced_pattern_content() reads patterns at depth 0 to 5. The
-     * search goes up as far: a post six patterns above the saved one is
-     * cleared, a post seven above is not, and no more than six SELECTs run.
+     * The page render has no depth limit, so the search follows the
+     * references up as far as they go, with only a cost ceiling of 20
+     * levels: a post that uses pattern 7 (six levels above the saved one)
+     * is cleared, a post 20 levels up is cleared, a post 21 levels up is not,
+     * and no more than 20 SELECTs run.
      */
-    public function test_the_search_follows_at_most_six_levels() {
-        // Pattern 1 is in 2, 2 in 3, ... 7 in 8
+    public function test_the_search_follows_up_to_twenty_levels() {
+        // Pattern 1 is in 2, 2 in 3, ... 21 in 22
         $this->addPost(1, 'wp_block', 'Level 0');
-        for ($id = 2; $id <= 8; $id++) {
+        for ($id = 2; $id <= 22; $id++) {
             $this->addPost($id, 'wp_block', $this->ref($id - 1));
         }
-        $this->addPost(105, 'post', $this->ref(5));
-        $this->addPost(106, 'post', $this->ref(6));
         $this->addPost(107, 'post', $this->ref(7));
+        $this->addPost(120, 'post', $this->ref(20));
+        $this->addPost(121, 'post', $this->ref(21));
 
         $this->savePattern(1);
 
-        $this->assertCleared(105);
-        $this->assertCleared(106, 'Pattern 1 is at depth 5 under pattern 6: the editor scan reads it.');
-        $this->assertKept(107, 'Pattern 1 is at depth 6 under pattern 7: past the cap.');
-        $this->assertCount(6, $this->db->selects);
+        $this->assertCleared(107, 'Pattern 1 is six levels under pattern 7: the page renders it.');
+        $this->assertCleared(120, 'Pattern 1 is 19 levels under pattern 20: inside the ceiling.');
+        $this->assertKept(121, 'Pattern 1 is 20 levels under pattern 21: past the ceiling.');
+        $this->assertCount(20, $this->db->selects);
+    }
+
+    public function test_the_search_stops_at_the_first_level_that_finds_no_new_pattern() {
+        // Pattern 1 is in 2, 2 in 3; nothing holds 3
+        $this->addPost(1, 'wp_block', 'Level 0');
+        $this->addPost(2, 'wp_block', $this->ref(1));
+        $this->addPost(3, 'wp_block', $this->ref(2));
+        $this->addPost(103, 'post', $this->ref(3));
+
+        $this->savePattern(1);
+
+        $this->assertCleared(103);
+        // Users of 1 (pattern 2), of 2 (pattern 3), of 3 (post 103 only)
+        $this->assertCount(3, $this->db->selects);
     }
 
     public function test_revisions_templates_and_other_internal_types_are_not_cleared_or_followed() {
@@ -413,8 +438,8 @@ class SyncedPatternUserCachesTest extends TestCase {
 
     /**
      * Under a persistent object cache the transients are in the cache, not
-     * in the options table: each key is deleted there, with no flush beyond
-     * the one that clear_post_content_caches() runs for the archive caches.
+     * in the options table: each key is deleted there, and this method runs
+     * no flush of its own.
      */
     public function test_with_a_persistent_object_cache_the_keys_are_deleted_from_the_cache() {
         $this->persistent = true;

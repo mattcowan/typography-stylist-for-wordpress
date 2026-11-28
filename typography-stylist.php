@@ -2952,12 +2952,16 @@ class Typost {
      *
      * The posts are found by the saved reference: "ref":N followed by "}"
      * or ",", so pattern 12 does not match 123 or 1234. The block serializer
-     * writes the attributes with no spaces; a hand-written "ref": 12 is not
-     * found. A pattern can be inside another pattern, and a post that uses
-     * the outer pattern names only that one, so the search follows the
-     * references up through other synced patterns, as
-     * get_synced_pattern_content() follows them down: a visited set, and at
-     * most six levels (its depth cap). A synced pattern has no view, so it
+     * writes the attributes with no spaces and the ID as a number; a
+     * hand-written "ref": 12 or "ref":"12" is not found. A pattern can be
+     * inside another pattern, and a post that uses the outer pattern names
+     * only that one, so the search follows the references up through other
+     * synced patterns. A visited set searches each pattern once, so patterns
+     * that hold each other cannot loop, and the search stops at the first
+     * level that finds no new pattern. The page render
+     * (render_block_core_block()) has no depth limit, so the search has
+     * only a cost ceiling of 20 levels, deeper than real sites nest
+     * patterns. A synced pattern has no view, so it
      * keeps no cache of its own here. Revisions are not searched. Posts of
      * types without a frontend view (is_font_cache_post_type()), for example
      * templates and template parts, are found but keep no per-post cache: a
@@ -2966,7 +2970,9 @@ class Typost {
      * Cost: one SELECT of IDs and post types per level of nesting (one level
      * for a pattern that no other pattern holds). Each SELECT reads the
      * post_content column of the posts table with LIKE, as a search of the
-     * site does. Then one DELETE for each 100 posts found. Under a persistent
+     * site does. A first LIKE on '"ref":' leaves out the posts that hold no
+     * reference, so a level with many patterns costs about as much as a level
+     * with one. Then one DELETE for each 100 posts found. Under a persistent
      * object cache, where the transients are not in the options table, each
      * key is deleted from the object cache instead, with no flush.
      *
@@ -2988,17 +2994,18 @@ class Typost {
         $post_ids = array();
         $clears_type = array();
 
-        // Six levels, as get_synced_pattern_content() reads depth 0 to 5
-        for ($level = 0; $level <= 5 && !empty($frontier); $level++) {
+        // A cost ceiling only: the visited set ends every search, and real
+        // sites stop after a level or two
+        for ($level = 0; $level < 20 && !empty($frontier); $level++) {
             $likes = array();
-            $args = array('revision');
+            $args = array('revision', '%' . $wpdb->esc_like('"ref":') . '%');
             foreach ($frontier as $ref) {
                 $likes[] = 'post_content LIKE %s OR post_content LIKE %s';
                 $args[] = '%' . $wpdb->esc_like('"ref":' . $ref . '}') . '%';
                 $args[] = '%' . $wpdb->esc_like('"ref":' . $ref . ',') . '%';
             }
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- one placeholder per LIKE, built above
-            $rows = $wpdb->get_results($wpdb->prepare("SELECT ID, post_type FROM {$wpdb->posts} WHERE post_type <> %s AND (" . implode(' OR ', $likes) . ')', ...$args));
+            $rows = $wpdb->get_results($wpdb->prepare("SELECT ID, post_type FROM {$wpdb->posts} WHERE post_type <> %s AND post_content LIKE %s AND (" . implode(' OR ', $likes) . ')', ...$args));
 
             $frontier = array();
             foreach ((array) $rows as $row) {
