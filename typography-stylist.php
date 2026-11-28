@@ -575,6 +575,84 @@ class Typost {
     }
 
     /**
+     * Cache key of a list page's font detection answer (#486).
+     *
+     * The key hashes the IDs of the listed posts, so a post save cannot name
+     * the keys of the list pages that show the post. Without a persistent
+     * object cache the transients are option rows, and
+     * clear_post_content_caches() deletes them with a wildcard. With one
+     * (Redis, Memcached) they live in the object cache, which cannot delete
+     * keys by prefix: the hash then also takes the generation of the
+     * `typost_font_detection` cache group (core's `last_changed` pattern,
+     * WordPress 4.7+), and clear_post_content_caches() deletes that
+     * generation, so the next view misses and scans again without a flush of
+     * the whole object cache. Keys of old generations expire with their
+     * 12-hour lifetime; an evicted generation only causes a miss. The
+     * per-post keys carry the same generation (get_post_font_cache_key()).
+     *
+     * No generation without a persistent object cache: there `last_changed`
+     * lives for one request only, so every view would miss and leave an
+     * orphan row.
+     *
+     * The generation goes into the hash after the prefix, so the key keeps
+     * its length and the `typost_has_styled_%` / `typost_used_fonts_%` row
+     * matches of clear_font_detection_cache() still find it.
+     *
+     * @since 2.4.0
+     *
+     * @param string $prefix   Key prefix, ending in `_archive_`.
+     * @param array  $post_ids IDs of the posts on the page, in query order.
+     * @return string Transient name.
+     */
+    private function get_archive_font_cache_key($prefix, $post_ids) {
+        $hashed = serialize($post_ids);
+        if (wp_using_ext_object_cache()) {
+            $hashed .= '|' . wp_cache_get_last_changed('typost_font_detection');
+        }
+        return $prefix . md5($hashed);
+    }
+
+    /**
+     * Cache key of a singular post's font detection answer (#486).
+     *
+     * A singular page can show other posts: a Query Loop renders their
+     * content, a synced pattern its own. Its per-post cache then holds their
+     * fonts, and a save of one of those posts cannot name the keys of the
+     * pages that show it. Under a persistent object cache the key therefore
+     * carries the generation of the `typost_font_detection` cache group, the
+     * same one as the archive keys (get_archive_font_cache_key()): a
+     * published or private save or delete deletes it
+     * (clear_post_content_caches()), and every page scans again on its next
+     * view without a flush of the whole object cache. A save to another
+     * status deletes only the post's own two keys of the current generation
+     * (clear_font_caches_for_status()).
+     *
+     * Without a persistent object cache the key is the name it had before
+     * 2.4.0, `$prefix . $post_id`: there `last_changed` lives for one request
+     * only. Such a page keeps the fonts of the posts it shows until its own
+     * save or the 12-hour expiry.
+     *
+     * The generation goes after the ID as the first 8 characters of its
+     * md5 (core's value holds a space, which some object cache back ends
+     * refuse in a key), so the prefix stays first and the
+     * `typost_has_styled_%` / `typost_used_fonts_%` row matches of
+     * clear_font_detection_cache() still find the key.
+     *
+     * @since 2.4.0
+     *
+     * @param string $prefix  Key prefix: `typost_has_styled_` or `typost_used_fonts_`.
+     * @param int    $post_id Post ID.
+     * @return string Transient name.
+     */
+    private function get_post_font_cache_key($prefix, $post_id) {
+        $key = $prefix . $post_id;
+        if (wp_using_ext_object_cache()) {
+            $key .= '_' . substr(md5((string) wp_cache_get_last_changed('typost_font_detection')), 0, 8);
+        }
+        return $key;
+    }
+
+    /**
      * Check if current page has styled content
      * Works for all singular post types (posts, pages, custom post types) and archive pages
      */
@@ -590,7 +668,7 @@ class Typost {
             }
 
             // Cache the result per post, except in a real preview (#480)
-            $cache_key = 'typost_has_styled_' . $post->ID;
+            $cache_key = $this->get_post_font_cache_key('typost_has_styled_', $post->ID);
             $use_cache = $this->use_post_font_cache($post);
             $has_styled = $use_cache ? get_transient($cache_key) : false;
 
@@ -630,7 +708,7 @@ class Typost {
 
             // Build cache key from all post IDs on this page
             $post_ids = wp_list_pluck($wp_query->posts, 'ID');
-            $cache_key = 'typost_has_styled_archive_' . md5(serialize($post_ids));
+            $cache_key = $this->get_archive_font_cache_key('typost_has_styled_archive_', $post_ids);
             $has_styled = get_transient($cache_key);
 
             if (false === $has_styled) {
@@ -689,7 +767,7 @@ class Typost {
             }
 
             // Cache the result per post, except in a real preview (#480)
-            $cache_key = 'typost_used_fonts_' . $post->ID;
+            $cache_key = $this->get_post_font_cache_key('typost_used_fonts_', $post->ID);
             $use_cache = $this->use_post_font_cache($post);
             $used_fonts = $use_cache ? get_transient($cache_key) : false;
 
@@ -744,7 +822,7 @@ class Typost {
 
             // Build cache key from all post IDs on this page
             $post_ids = wp_list_pluck($wp_query->posts, 'ID');
-            $cache_key = 'typost_used_fonts_archive_' . md5(serialize($post_ids));
+            $cache_key = $this->get_archive_font_cache_key('typost_used_fonts_archive_', $post_ids);
             $used_fonts = get_transient($cache_key);
 
             if (false === $used_fonts) {
@@ -2803,8 +2881,10 @@ class Typost {
         // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
         // The row deletes above do not reach a persistent object cache, where
-        // get_transient() would keep answering from the cached copy. The other
-        // wildcard deletion paths flush for the same reason.
+        // get_transient() would keep answering from the cached copy.
+        // invalidate_editor_data_cache() flushes for the same reason. The
+        // font detection key generation (#486) cannot replace this flush:
+        // the per-page font CSS keys have no generation.
         if (wp_using_ext_object_cache()) {
             wp_cache_flush();
         }
@@ -2852,9 +2932,10 @@ class Typost {
      *
      * A save of any status clears the post's own caches (#480): a draft,
      * pending or scheduled post kept the fonts of its first view for 12
-     * hours. The archive caches (a wildcard delete, and an object cache
-     * flush under a persistent object cache) are cleared only for a
-     * published or private post, because archives list no other status
+     * hours. The archive caches (a wildcard delete, and under a persistent
+     * object cache a new key generation, which also ages the per-post caches
+     * of the pages that show the post) are cleared only for a published or
+     * private post, because archives list no other status
      * (clear_font_caches_for_status()). Autosaves and revisions clear
      * nothing.
      * An autosave of a draft by its author updates the draft itself, but a
@@ -2915,11 +2996,13 @@ class Typost {
             return;
         }
 
-        // Exact keys: no wildcard delete, and safe under a persistent object cache
+        // Exact keys: no wildcard delete, and safe under a persistent object
+        // cache, where they are the keys of the current generation (#486).
+        // The generation stays: no archive or other page lists this post.
         $post_id = absint($post_id);
         if ($post_id) {
-            delete_transient('typost_has_styled_' . $post_id);
-            delete_transient('typost_used_fonts_' . $post_id);
+            delete_transient($this->get_post_font_cache_key('typost_has_styled_', $post_id));
+            delete_transient($this->get_post_font_cache_key('typost_used_fonts_', $post_id));
         }
     }
 
@@ -3085,8 +3168,11 @@ class Typost {
      *
      * The archive caches go with a wildcard row delete. Under a persistent
      * object cache (Redis, Memcached) the transients are not in the options
-     * table, so this also flushes the whole object cache; without one it
-     * does not flush (#484).
+     * table, so this also deletes the generation of the archive and per-post
+     * keys (get_archive_font_cache_key(), get_post_font_cache_key()); it does
+     * not flush the object cache (#484, #486). The generation also ages the
+     * per-post keys of the pages that show this post in a Query Loop or a
+     * synced pattern.
      *
      * Does NOT clear global font CSS caches (admin_font_css, editor_font_css,
      * block_font_css, css_variable_decls) because those only change when fonts
@@ -3095,7 +3181,9 @@ class Typost {
      * change, a new cache key is generated automatically.
      *
      * @since 1.1.9
-     * @since 2.4.0 Flushes the object cache only under a persistent object cache.
+     * @since 2.4.0 Deletes the font detection key generation in place of an
+     *              object cache flush, and only under a persistent object
+     *              cache.
      * @access private
      *
      * @param int $post_id Post ID whose caches should be cleared.
@@ -3106,11 +3194,15 @@ class Typost {
             return;
         }
 
-        // Clear per-post transients (exact key, no wildcard needed)
-        delete_transient('typost_has_styled_' . $post_id);
-        delete_transient('typost_used_fonts_' . $post_id);
-        wp_cache_delete('typost_has_styled_' . $post_id, 'transient');
-        wp_cache_delete('typost_used_fonts_' . $post_id, 'transient');
+        // Clear per-post transients (exact key, no wildcard needed). Under a
+        // persistent object cache the generation delete below also ages
+        // them, and the per-post keys of every other page (#486).
+        $has_styled_key = $this->get_post_font_cache_key('typost_has_styled_', $post_id);
+        $used_fonts_key = $this->get_post_font_cache_key('typost_used_fonts_', $post_id);
+        delete_transient($has_styled_key);
+        delete_transient($used_fonts_key);
+        wp_cache_delete($has_styled_key, 'transient');
+        wp_cache_delete($used_fonts_key, 'transient');
 
         // Clear all archive page caches.
         // Archive cache keys use MD5(serialized post IDs), so we cannot target
@@ -3131,11 +3223,16 @@ class Typost {
         // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
         // The row delete does not reach a persistent object cache, where the
-        // archive transients live and get_transient() would keep answering
-        // from them. Without one the flush only emptied the per-request cache
-        // (#484), as in clear_font_detection_cache().
+        // archive transients live, and the object cache cannot delete keys by
+        // prefix. Deleting the generation in their keys
+        // (get_archive_font_cache_key(), get_post_font_cache_key()) makes
+        // every archive answer stale, and the per-post answer of every page,
+        // which can show this post in a Query Loop or a synced pattern,
+        // without a flush of the other cached values of the site (#486).
+        // Without a persistent object cache the keys have no generation and
+        // the row delete is enough for the archives (#484).
         if (wp_using_ext_object_cache()) {
-            wp_cache_flush();
+            wp_cache_delete('last_changed', 'typost_font_detection');
         }
     }
 
